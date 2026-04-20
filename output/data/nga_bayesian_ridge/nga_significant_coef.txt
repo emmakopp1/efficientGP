@@ -1,0 +1,108 @@
+cv fold 0 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05199793948822262
+n_fatalities_Violence_against_civilians_rolsum_90days -0.015955051211901404
+food_inflation_cubic_intp -0.20236804230683347
+currency_exchange_cubic_intp -0.24844812598943758
+Muslim -0.013867065322426896
+cv fold 1 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.056311952848683205
+n_fatalities_Violence_against_civilians_rolsum_90days -0.0047585034805936646
+food_inflation_cubic_intp -0.2320805285107564
+currency_exchange_cubic_intp -0.2381361827242294
+Muslim -0.013639706415260109
+cv fold 2 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05537718101149406
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010923088303140401
+food_inflation_cubic_intp -0.23402693925509246
+currency_exchange_cubic_intp -0.24955804301838966
+Muslim -0.014868756470599789
+cv fold 3 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06727116364601114
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010184845567637135
+food_inflation_cubic_intp -0.1967763271285857
+currency_exchange_cubic_intp -0.24890629856077878
+Muslim -0.013703308857088472
+cv fold 4 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06512148984539273
+n_fatalities_Violence_against_civilians_rolsum_90days -0.027164956697572348
+food_inflation_cubic_intp -0.22851233899804663
+currency_exchange_cubic_intp -0.23369318474528922
+Muslim -0.01437434232462615
+cv fold 5 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.0629048244514338
+n_fatalities_Violence_against_civilians_rolsum_90days -0.05844653251706128
+food_inflation_cubic_intp -0.2018220523971084
+currency_exchange_cubic_intp -0.25064146939798004
+Muslim -0.013604207967576202
+cv fold 0 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05199793948822262
+n_fatalities_Violence_against_civilians_rolsum_90days -0.015955051211901404
+food_inflation_cubic_intp -0.20236804230683347
+currency_exchange_cubic_intp -0.24844812598943758
+Muslim -0.013867065322426896
+cv fold 1 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.056311952848683205
+n_fatalities_Violence_against_civilians_rolsum_90days -0.0047585034805936646
+food_inflation_cubic_intp -0.2320805285107564
+currency_exchange_cubic_intp -0.2381361827242294
+Muslim -0.013639706415260109
+cv fold 2 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05537718101149406
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010923088303140401
+food_inflation_cubic_intp -0.23402693925509246
+currency_exchange_cubic_intp -0.24955804301838966
+Muslim -0.014868756470599789
+cv fold 3 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06727116364601114
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010184845567637135
+food_inflation_cubic_intp -0.1967763271285857
+currency_exchange_cubic_intp -0.24890629856077878
+Muslim -0.013703308857088472
+cv fold 4 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06512148984539273
+n_fatalities_Violence_against_civilians_rolsum_90days -0.027164956697572348
+food_inflation_cubic_intp -0.22851233899804663
+currency_exchange_cubic_intp -0.23369318474528922
+Muslim -0.01437434232462615
+cv fold 5 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.0629048244514338
+n_fatalities_Violence_against_civilians_rolsum_90days -0.05844653251706128
+food_inflation_cubic_intp -0.2018220523971084
+currency_exchange_cubic_intp -0.25064146939798004
+Muslim -0.013604207967576202
+cv fold 0 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05199793948822262
+n_fatalities_Violence_against_civilians_rolsum_90days -0.015955051211901404
+food_inflation_cubic_intp -0.20236804230683347
+currency_exchange_cubic_intp -0.24844812598943758
+Muslim -0.013867065322426896
+cv fold 1 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.056311952848683205
+n_fatalities_Violence_against_civilians_rolsum_90days -0.0047585034805936646
+food_inflation_cubic_intp -0.2320805285107564
+currency_exchange_cubic_intp -0.2381361827242294
+Muslim -0.013639706415260109
+cv fold 2 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.05537718101149406
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010923088303140401
+food_inflation_cubic_intp -0.23402693925509246
+currency_exchange_cubic_intp -0.24955804301838966
+Muslim -0.014868756470599789
+cv fold 3 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06727116364601114
+n_fatalities_Violence_against_civilians_rolsum_90days -0.010184845567637135
+food_inflation_cubic_intp -0.1967763271285857
+currency_exchange_cubic_intp -0.24890629856077878
+Muslim -0.013703308857088472
+cv fold 4 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.06512148984539273
+n_fatalities_Violence_against_civilians_rolsum_90days -0.027164956697572348
+food_inflation_cubic_intp -0.22851233899804663
+currency_exchange_cubic_intp -0.23369318474528922
+Muslim -0.01437434232462615
+cv fold 5 significant variables:
+rainfall_3_months_anomaly_cubic_intp -0.0629048244514338
+n_fatalities_Violence_against_civilians_rolsum_90days -0.05844653251706128
+food_inflation_cubic_intp -0.2018220523971084
+currency_exchange_cubic_intp -0.25064146939798004
+Muslim -0.013604207967576202

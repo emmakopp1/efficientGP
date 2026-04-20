@@ -1,0 +1,67 @@
+{
+  "country": "chad",
+  "mean_test_rmse": 0.06252795012167212,
+  "std_test_rmse": 0.014466430557726815,
+  "cv_folds": [
+    {
+      "cv_fold": 0,
+      "test_rmse": 0.0585668335307672,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "subsample": 1.0
+      }
+    },
+    {
+      "cv_fold": 1,
+      "test_rmse": 0.06555657304893232,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 5,
+        "n_estimators": 100,
+        "subsample": 1.0
+      }
+    },
+    {
+      "cv_fold": 2,
+      "test_rmse": 0.035975044839989166,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "subsample": 0.8
+      }
+    },
+    {
+      "cv_fold": 3,
+      "test_rmse": 0.08373457347345459,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "subsample": 1.0
+      }
+    },
+    {
+      "cv_fold": 4,
+      "test_rmse": 0.07097363194758988,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "subsample": 0.8
+      }
+    },
+    {
+      "cv_fold": 5,
+      "test_rmse": 0.06036104388929955,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "subsample": 1.0
+      }
+    }
+  ]
+}

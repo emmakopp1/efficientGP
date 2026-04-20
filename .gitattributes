@@ -1,0 +1,2 @@
+output/bym2/*.rds filter=lfs diff=lfs merge=lfs -text
+output/bym2/*/*.rds filter=lfs diff=lfs merge=lfs -text
