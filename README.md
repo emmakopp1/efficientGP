@@ -45,7 +45,7 @@ efficientGP/
 │   └── analysis/
 │       ├── visualise_tcd_result.R    # Comparison plots for Chad
 │       ├── visualise_nga_result.R    # Comparison plots for Nigeria
-│       └── metrics.ipynb             # Performance metrics notebook
+│       └── metrics.py                # Performance metrics notebook
 ├── data/
 │   ├── new/
 │   │   ├── chad/                     # Weekly time series + static region data for Chad
@@ -64,9 +64,7 @@ efficientGP/
 
 ### Spatio-temporal Gaussian Process
 
-The GP prior is defined over regions $s$ and weeks $t$ with a separable covariance:
-
-$$K(s, t, s', t') = \sigma^2 \cdot k_{\text{space}}(s, s';\, \rho_1) \cdot k_{\text{time}}(t, t';\, \rho_2, H) + \sigma_r^2 \, \delta_{s=s'}$$
+The GP prior is defined over regions $s$ and weeks $t$:
 
 - **Spatial kernel** $k_{\text{space}}$: exponential (Ornstein–Uhlenbeck) with range $\rho_1$ (fixed by cross-validation).
 - **Temporal kernel** $k_{\text{time}}$: fractional Brownian Motion (fBM) kernel with range $\rho_2$ and Hurst exponent $H$.
@@ -180,7 +178,7 @@ source("code/analysis/visualise_tcd_result.R")
 source("code/analysis/visualise_nga_result.R")
 ```
 
-Quantitative metrics are computed in `code/analysis/metrics.ipynb`.
+Quantitative metrics are computed in `code/analysis/metrics.py`.
 
 ---
 
