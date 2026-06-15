@@ -122,7 +122,7 @@ df_true <- df_gp |>
   )
 
 # Combine all model predictions with harmonized column names
-df_pred <- bind_rows(df_gp, df_bayesian_ridge, df_mlp) |>
+df_pred <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
   transmute(
     Datetime,
     adm1_name,
@@ -203,7 +203,8 @@ lab_hide_pad <- function(x) ifelse(str_detect(x, "__pad"), "", x)
 model_cols <- c(
   "GP" = "#1B7837",
   "Bayesian Ridge" = "#D73027",
-  "MLP" = "#2C7FB8"
+  "MLP" = "#2C7FB8",
+  "XGBoost" = "#8E63CE"
 )
 
 
@@ -272,7 +273,7 @@ ggsave(
 alpha <- 0.05
 
 # Calculate prediction errors and interval metrics
-df_pred_metrics <- bind_rows(df_gp, df_bayesian_ridge, df_mlp) |>
+df_pred_metrics <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
   mutate(
     model = factor(
       model,

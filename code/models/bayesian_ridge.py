@@ -6,16 +6,19 @@ Bayesian ridge regression for FCS Prediction
 # IMPORT LIBRAIRIES
 # ============================================================================
 
-import pandas as pd
-import numpy as np
+import time
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from sklearn import linear_model
-from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import make_pipeline
-import time
+from sklearn.preprocessing import StandardScaler
 
 from utils.model_utils import logit, logit_inverse
+
+np.random.seed(42)
 
 
 # ============================================================================
@@ -36,10 +39,10 @@ dir_output_br_prediction.mkdir(parents=True, exist_ok=True)
 dir_output_br_prediction_tcd.mkdir(parents=True, exist_ok=True)
 
 # input data for nigeria 
-path_nigeria_new = BASE_DIR / "data" / "new" / "Nigeria" / "Nigeria-weekly-with-features.csv"
+path_nigeria_new = BASE_DIR / "data" / "new" / "nigeria" / "nigeria-weekly-with-features.csv"
 
 # input data for chad 
-path_chad_new = BASE_DIR / "data" / "new" / "Chad" / "Chad-weekly-with-features.csv"
+path_chad_new = BASE_DIR / "data" / "new" / "chad" / "chad-weekly-with-features.csv"
 
 
 # Read nigerian file filter only the data with 90 days survey

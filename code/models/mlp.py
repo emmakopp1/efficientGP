@@ -7,25 +7,29 @@ To run training on Chad with data saving:
 
 python mlp.py \
     --country chad \
-    --project-path /Users/kopp/Documents/efficientGP/output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735/ \
-    --output-data /Users/kopp/Documents/efficientGP/output/data/tcd_mlp
+    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735 \
+    --output-data output/data/tcd_mlp
 
 To run on specific folds only:
 
 python mlp.py \
     --country nigeria \
-    --project-path /Users/kopp/Documents/efficientGP/output/gaussian_process/NGA_gp_with_features_normal_centered_20260217_155435/ \
-    --output-data /Users/kopp/Documents/efficientGP/output/data/nga_mlp
+    --project-path output/gaussian_process/NGA_gp_with_features_normal_centered_20260217_155435 \
+    --output-data output/data/nga_mlp
 """
 
 import argparse
-import pandas as pd
-import numpy as np
-import torch
 import os
 import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 from utils.mlp_utils import (
     FCSDataset,
@@ -296,9 +300,16 @@ def main():
 
     args = parser.parse_args()
 
+    # Resolve paths relative to project root if not absolute
+    args.project_path = str(BASE_DIR / args.project_path) if not os.path.isabs(args.project_path) else args.project_path
+    if args.output_data is not None:
+        args.output_data = str(BASE_DIR / args.output_data) if not os.path.isabs(args.output_data) else args.output_data
+
     # Set random seeds
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+    rng = torch.Generator()
+    rng.manual_seed(args.seed)
 
     # Parse CV folds
     cv_folds = [int(x) for x in args.cv_folds.split(',')]
