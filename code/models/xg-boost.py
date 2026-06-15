@@ -57,16 +57,16 @@ Usage
 -----
 Train on Chad with prediction saving:
 
-    python xg-boost.py \\
-        --country chad \\
-        --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735 \\
-        --output-data output/data/tcd_xg_boost
+python xg-boost.py \
+    --country chad \
+    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735 \
+    --output-data output/data/tcd_xg_boost
 
 Train on Nigeria:
 
-    python xg-boost.py \\
-        --country nigeria \\
-        --project-path output/gaussian_process/NGA_gp_with_features_normal_centered_20260217_155435/ \\
+    python xg-boost.py \
+        --country nigeria \
+        --project-path output/gaussian_process/NGA_gp_with_features_normal_centered_20260217_155435/ \
         --output-data output/data/nga_xg_boost
 
 CLI arguments

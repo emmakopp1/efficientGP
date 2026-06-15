@@ -11,7 +11,7 @@ country <- "Nigeria"
 iso3 <- "NGA"
 
 # Cross-validation parameters
-n_folds <- 1
+n_folds <- 5
 
 # Stan sampling parameters
 sampling_config <- list(
