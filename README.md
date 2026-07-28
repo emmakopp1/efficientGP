@@ -244,16 +244,6 @@ The weekly food security data used in this paper are collected by the [World Foo
 
 The data are not included in this repository. They are available upon reasonable request.
 
-Input data files:
-
-| File | Description |
-|---|---|
-| `data/new/nigeria/nigeria-weekly-with-features.csv` | Weekly FCS observations + covariates, Nigeria |
-| `data/new/nigeria/nigeria_shap.csv` | Subset used for SHAP analysis, Nigeria |
-| `data/new/chad/chad-weekly-with-features.csv` | Weekly FCS observations + covariates, Chad |
-| `data/new/chad/chad-SHAP.csv` | Subset used for SHAP analysis, Chad |
-| `data/nigeria_geospatial/` | Shapefiles for administrative boundaries (Nigeria) |
-
 ---
 
 ## License
