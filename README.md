@@ -242,6 +242,8 @@ python code/models/TCD_shap_analysis.py
 
 The weekly food security data used in this paper are collected by the [World Food Programme (WFP)](https://www.wfp.org/) and distributed through the [VAM Food Security Monitoring](https://dataviz.vam.wfp.org/) platform. The processed dataset used here is an extension of the one published by [Foini et al. (2023)](https://github.com/pietro-foini/ISI-WFP).
 
+The data are not included in this repository. They are available upon reasonable request.
+
 Input data files:
 
 | File | Description |
