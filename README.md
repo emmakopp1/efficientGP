@@ -75,12 +75,12 @@ efficientGP/
 
 ### Spatio-temporal Gaussian Process
 
-The GP prior is defined over regions $s$ and weeks $t$:
+The GP prior is defined over regions $s$ and weeks $t$. The spatio-temporal function is decomposed as an additive GP:
 
-$$f(s, t) = k_{\text{space}}(s, s') \cdot k_{\text{time}}(t, t') + \sigma_r^2 \cdot \delta_{s=s'}$$
+$$f(s, t) = f_{\text{space}}(s, s') + f_{\text{time}}(t, t') + f_{\text{space}}(s, s')f_{\text{time}}(t, t')+ \sigma_r^2 \cdot \delta_{s=s'}$$
 
-- **Spatial kernel** $k_{\text{space}}$: Ornstein–Uhlenbeck (exponential) with range $\rho_1$, fixed by cross-validation.
-- **Temporal kernel** $k_{\text{time}}$: fractional Brownian Motion (fBM) with range $\rho_2$ and Hurst exponent $H$.
+- **Spatial kernel** $f_{\text{space}}$: Ornstein–Uhlenbeck (exponential) with range $\rho_1$, fixed by cross-validation.
+- **Temporal kernel** $f_{\text{time}}$: sum of an exponential and a squared Brownian Motion (fBM) with range $\rho_2$ and Hurst exponent $H$.
 - **Region random effect** $\sigma_r^2$: white noise term per region.
 
 Covariates enter through a linear term. Two prior specifications are provided:
