@@ -4,7 +4,7 @@ This repository contains the code and data accompanying the paper:
 
 > **Filling survey gaps in food security monitoring with spatio-temporal additive Gaussian process models**
 
-We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against Bayesian Ridge regression, Multi-Layer Perceptron (MLP), and XGBoost.
+by E. Kopp, S. Ishida, R. Leygonie, F. Panero (2026). We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against Bayesian Ridge regression, Multi-Layer Perceptron (MLP), and XGBoost.
 
 ---
 
