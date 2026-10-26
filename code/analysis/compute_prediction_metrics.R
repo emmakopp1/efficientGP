@@ -212,7 +212,7 @@ run_country <- function(country_label, gp_with_features_dir, gp_no_features_dir,
 tcd_metrics <- run_country(
   country_label = "Chad",
   gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_with_features_ridge_centered_20261026_132935"),
-  gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20251210_112502"),
+  gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20261026_174120"),
   br_dir = file.path(topdir, "output", "data", "tcd_bayesian_ridge"),
   br_prefix = "tcd",
   mlp_dir = file.path(topdir, "output", "data", "tcd_mlp"),
