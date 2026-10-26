@@ -26,7 +26,7 @@ path_nigeria <- file.path(
 
 path_chad <- file.path(
   "output", "gaussian_process",
-  "TCD_gp_with_features_ridge_centered_20251216_114735"
+  "TCD_gp_with_features_ridge_centered_20261026_132935"
 )
 
 # Feature name mapping for Nigeria
@@ -338,12 +338,15 @@ rho_cv_chad <- read_csv(rho_res_path_chad) |>
 rho_cv <- bind_rows(rho_cv_nigeria, rho_cv_chad)
 
 
-# Rhat 
+# Rhat
+# Fold 0 is always in train and never a held-out test fold for either
+# country, so it is excluded here (reported as "--" in the table).
 options(pillar.sigfig = 5)
 rhat <- bind_rows(
   read_csv(rhat_path_nigeria) |> select(cv_fold, max_rhat) |> mutate(country = "Nigeria"),
   read_csv(rhat_path_chad)    |> select(cv_fold, max_rhat) |> mutate(country = "Chad")
-) |> 
+) |>
+  filter(cv_fold != 0) |>
   select(country, cv_fold, max_rhat)
 
 # Join rhat and rho
