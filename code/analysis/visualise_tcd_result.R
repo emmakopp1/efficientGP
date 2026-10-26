@@ -17,6 +17,7 @@ library(scales)
 library(purrr)
 library(stringr)
 library(here)
+library(sf)
 
 
 # Define paths to model output directories
@@ -594,3 +595,172 @@ ggsave(
   filename = file.path("output", "figure", "TCD_GP_comparison_features_vs_no_features.png"),
   plot = gg_gp_comparison, width = 6, height = 7, units = "in", dpi = 300, bg = "white"
 )
+
+# ============================================================================
+# STEP 8: Chad CV fold re-assignment - region selection for fold 0
+# ============================================================================
+# Fold 0 ("fixed") always stays in the train set and is never used as a test
+# fold. It contains N'Djamena (capital) and any region whose geographic
+# quadrant (North/South/East/West) has more than 5 regions, so that folds
+# 1-5 can each contain exactly one region per quadrant (mirroring the
+# Nigeria nc/ne/nw/s x cv_ind design, see STEP 8 in visualise_nga_result.R).
+#
+# STEP 8a: how many regions are needed in fold 0
+# STEP 8b: classify regions into geographic quadrants (N / S / E / W)
+# STEP 8c: spatial map of FCS prevalence over time, used to pick the
+#          region(s) to add to fold 0 besides the capital
+# ============================================================================
+
+df_static_tcd <- read_csv(file.path("data", "new", "chad", "chad-static-data.csv"), show_col_types = FALSE)
+df_weekly_tcd <- read_csv(file.path("data", "new", "chad", "chad-weekly-with-features.csv"), show_col_types = FALSE)
+
+capital_tcd <- "Ndjamzna" # N'Djamena, as spelled in the Chad CSVs
+
+# ---- STEP 8a: fold 0 size ----
+# Tibesti is already excluded upstream (not present in chad-weekly-with-features.csv)
+n_total_tcd <- df_static_tcd |>
+  filter(adm1_name != "Tibesti") |>
+  pull(adm1_name) |>
+  n_distinct()
+n_folds_1to5 <- 5
+n_quadrants <- 4
+n_in_folds_1to5 <- n_folds_1to5 * n_quadrants # one region per quadrant per fold
+n_fold0 <- n_total_tcd - n_in_folds_1to5
+
+cat("STEP 8a: Fold 0 size\n")
+cat("  Total regions available (excl. Tibesti):", n_total_tcd, "\n")
+cat("  Regions needed for folds 1-5 (", n_folds_1to5, "folds x", n_quadrants, "quadrants):", n_in_folds_1to5, "\n")
+cat("  => Regions to place in fold 0 (incl. capital):", n_fold0, "\n\n")
+
+# ---- STEP 8b: quadrant classification ----
+# Quadrant assigned relative to the median lat/lon of all non-capital,
+# non-Tibesti regions (N'Djamena and Tibesti excluded from the reference
+# center so the capital doesn't skew the split).
+df_geo_tcd <- df_static_tcd |>
+  filter(!(adm1_name %in% c("Tibesti", capital_tcd)))
+
+lat_center_tcd <- median(df_geo_tcd$Lat)
+lon_center_tcd <- median(df_geo_tcd$Lon)
+
+df_geo_tcd <- df_geo_tcd |>
+  mutate(
+    dlat = Lat - lat_center_tcd,
+    dlon = Lon - lon_center_tcd,
+    quadrant = case_when(
+      abs(dlat) > abs(dlon) & dlat > 0 ~ "North",
+      abs(dlat) > abs(dlon) & dlat <= 0 ~ "South",
+      dlon > 0 ~ "East",
+      TRUE ~ "West"
+    )
+  )
+
+cat("STEP 8b: Quadrant classification (excl. capital & Tibesti)\n")
+print(df_geo_tcd |> select(adm1_name, Lat, Lon, quadrant) |> arrange(quadrant, adm1_name), n = Inf)
+cat("\n")
+print(count(df_geo_tcd, quadrant))
+cat("\n  Need exactly", n_folds_1to5, "regions per quadrant for folds 1-5;\n")
+cat("  any quadrant with more than", n_folds_1to5, "regions has surplus candidate(s) for fold 0.\n\n")
+
+# ---- STEP 8c: spatial map of FCS prevalence over time ----
+# Mirrors the Nigeria spatial map (STEP 8 in visualise_nga_result.R /
+# output/figure/NGA_spatial_plot.png), here used to visually assess which
+# region(s), besides the capital, look the most unstable over time and are
+# therefore good candidates for fold 0.
+shp_name_fix_tcd <- c(
+  "Barh El Gazel" = "Barh El Gazal",
+  "Guéra" = "Guera",
+  "N'djamena" = capital_tcd,
+  "Ouaddaï" = "Ouaddai",
+  "Tandjilé" = "Tandjile"
+)
+
+gdf_tcd <- st_read(file.path("data", "chad_geospatial", "tcd_admin1.shp"), quiet = TRUE) |>
+  mutate(adm1_name = str_to_title(adm1_name)) |>
+  mutate(adm1_name = recode(adm1_name, !!!shp_name_fix_tcd)) |>
+  filter(adm1_name != "Tibesti") |>
+  select(adm1_name, geometry)
+
+df_weekly_tcd <- df_weekly_tcd |>
+  mutate(
+    Datetime = as.Date(Datetime),
+    poor_fcs = 100 * fcs
+  )
+
+# Pick 12 evenly spaced weeks across the period, like the Nigeria plot
+weeks_tcd <- sort(unique(df_weekly_tcd$Datetime))
+step_tcd <- max(1, floor(length(weeks_tcd) / 12))
+breaks_weeks_tcd <- weeks_tcd[seq(1, length(weeks_tcd), by = step_tcd)][1:12]
+
+df_map_tcd <- df_weekly_tcd |>
+  filter(Datetime %in% breaks_weeks_tcd) |>
+  inner_join(gdf_tcd, by = "adm1_name") |>
+  st_as_sf()
+
+capital_outline_tcd <- df_map_tcd |> filter(adm1_name == capital_tcd)
+
+p_tcd_spatial <- ggplot() +
+  geom_sf(
+    data = df_map_tcd,
+    aes(fill = poor_fcs),
+    color = "gray30",
+    linewidth = 0.1
+  ) +
+  geom_sf(
+    data = capital_outline_tcd,
+    fill = NA,
+    color = "black",
+    linewidth = 0.5
+  ) +
+  facet_wrap(~Datetime, ncol = 4) +
+  scale_fill_gradientn(
+    colours = wesanderson::wes_palette("Zissou1", n = 100, type = "continuous"),
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 20),
+    labels = function(x) paste0(x, "%"),
+    name = "Prevalence of households\n with insufficient food consumption  "
+  ) +
+  theme_void(base_size = 8) +
+  guides(
+    fill = guide_colorbar(
+      direction = "vertical",
+      title.position = "left",
+      title.hjust = 0.5,
+      title.theme = element_text(
+        angle = 90,
+        size = 7
+      )
+    )
+  ) +
+  theme(
+    legend.position = "left",
+    legend.text = element_text(angle = 45, size = 5),
+    legend.key.size = unit(0.4, "cm"),
+    legend.key.height = unit(0.8, "cm"),
+    legend.ticks.length = unit(c(-.05, 0), "cm"),
+    legend.ticks = element_line(colour = "black"),
+    axis.text = element_blank(),
+  )
+p_tcd_spatial
+
+ggsave(
+  filename = file.path("output", "figure", "TCD_spatial_plot.png"),
+  plot = p_tcd_spatial, width = 5, height = 3, units = "in", dpi = 300, bg = "white"
+)
+
+# ---- STEP 8d: FCS prevalence summary per region (sorted by variability) ----
+# Complements the map: mean/sd/min/max FCS prevalence over time per region,
+# used alongside the map to assess which region(s) look most unstable.
+summary_tcd <- df_weekly_tcd |>
+  group_by(adm1_name) |>
+  summarise(
+    mean = round(mean(poor_fcs), 1),
+    std = round(sd(poor_fcs), 1),
+    min = round(min(poor_fcs), 1),
+    max = round(max(poor_fcs), 1),
+    .groups = "drop"
+  ) |>
+  left_join(df_geo_tcd |> select(adm1_name, quadrant), by = "adm1_name") |>
+  arrange(desc(std))
+
+cat("STEP 8d: FCS prevalence summary per region (sorted by variability)\n")
+print(summary_tcd, n = Inf)
