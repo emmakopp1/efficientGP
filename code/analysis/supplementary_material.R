@@ -373,5 +373,62 @@ rho_rhat <- rho_cv |>
 
 rho_rhat
 
+# ============================================================================
+# Max Rhat / min ESS (bulk) table, by fold and country (tab:res_cv)
+# ============================================================================
+# Fold 0 is excluded (always in train, never a held-out test fold for
+# either country) and reported as "--".
+res_cv_wide <- bind_rows(
+  rhat |> rename(value_rhat = max_rhat),
+  tibble(country = unique(rhat$country), cv_fold = 0, value_rhat = NA_real_)
+) |>
+  left_join(
+    bind_rows(ess, tibble(country = unique(ess$country), cv_fold = 0, min_ess_bulk = NA_real_)),
+    by = c("country", "cv_fold")
+  ) |>
+  pivot_wider(
+    id_cols = cv_fold,
+    names_from = country,
+    values_from = c(value_rhat, min_ess_bulk),
+    names_glue = "{country}_{.value}"
+  ) |>
+  arrange(cv_fold)
+
+fmt_rhat <- function(x) if_else(is.na(x), "--", sprintf("%.4f", x))
+fmt_ess <- function(x) if_else(is.na(x), "--", sprintf("%.0f", x))
+
+res_cv_rows <- res_cv_wide |>
+  transmute(
+    row = paste(
+      cv_fold,
+      fmt_rhat(Nigeria_value_rhat), fmt_ess(Nigeria_min_ess_bulk),
+      fmt_rhat(Chad_value_rhat), fmt_ess(Chad_min_ess_bulk),
+      sep = " & "
+    )
+  ) |>
+  pull(row) |>
+  paste(collapse = " \\\\\n    ")
+
+res_cv_tex <- paste0(
+  "\\begin{table}[t!]\n",
+  "    \\centering\n",
+  "\\caption{Maximum $\\hat{R}$ and minimum effective sample size (ESS, bulk) from MCMC sampling for each fold in Nigeria and Chad, evaluated across all model parameters (Gaussian process hyperparameters and regression coefficients). $\\hat{R}$ values close to 1 and ESS well above 400 indicate satisfactory convergence.}\n",
+  "    \\label{tab:res_cv}\n",
+  "    \\begin{tabular}{lcccc}\n",
+  "    \\toprule\n",
+  "    & \\multicolumn{2}{c}{Nigeria} & \\multicolumn{2}{c}{Chad} \\\\\n",
+  "    Fold & Max $\\hat{R}$ & Min ESS & Max $\\hat{R}$ & Min ESS \\\\\n",
+  "    \\midrule\n",
+  "    ", res_cv_rows, " \\\\\n",
+  "    \\bottomrule\n",
+  "    \\end{tabular}\n",
+  "\\end{table}\n"
+)
+
+res_cv_path <- file.path("output", "tables", "res_cv.tex")
+writeLines(res_cv_tex, res_cv_path)
+cat("Saved", res_cv_path, "\n")
+cat(res_cv_tex)
+
 
 
