@@ -1,0 +1,33 @@
+% ============================================================================
+% Proper scoring rule definitions (CRPS, interval score)
+% For the "Evaluation via Proper Scoring Rules" reviewer response.
+% Intended to be dropped into the Methods / Evaluation section.
+% ============================================================================
+
+\paragraph{Continuous Ranked Probability Score (CRPS).}
+For an observation $y$ and a predictive cumulative distribution function $F$, the CRPS is
+\begin{equation}
+  \mathrm{CRPS}(F, y) = \int_{-\infty}^{\infty} \big(F(x) - \mathbb{1}\{x \ge y\}\big)^2 \, dx,
+\end{equation}
+a strictly proper scoring rule that reduces to the absolute error $|y - x|$ when $F$ is a point mass at $x$, so it generalises MAE to full predictive distributions. Lower values indicate better calibrated and sharper forecasts.
+
+For models providing $M$ posterior or bootstrap draws $x_1, \dots, x_M$ from $F$ (Gaussian process, MLP via MC dropout, XGBoost via spatial bootstrap), we use the empirical estimator
+\begin{equation}
+  \widehat{\mathrm{CRPS}}(x_{1:M}, y) = \frac{1}{M} \sum_{m=1}^{M} |x_m - y| - \frac{1}{2M^2} \sum_{m=1}^{M} \sum_{m'=1}^{M} |x_m - x_{m'}|.
+\end{equation}
+
+For Bayesian ridge regression, the predictive distribution is Gaussian, $F = \mathcal{N}(\mu, \sigma^2)$, for which the CRPS has the closed form
+\begin{equation}
+  \mathrm{CRPS}(\mathcal{N}(\mu, \sigma^2), y) = \sigma \left[ \frac{1}{\sqrt{\pi}} - 2\phi(z) - z\big(2\Phi(z) - 1\big) \right], \qquad z = \frac{y - \mu}{\sigma},
+\end{equation}
+where $\phi$ and $\Phi$ are the standard normal density and distribution function \cite{gneiting2007strictly}.
+
+\paragraph{Interval score.}
+For a $(1-\alpha)$ central prediction interval $[\ell, u]$, the interval score is
+\begin{equation}
+  \mathrm{IS}_\alpha(\ell, u, y) = (u - \ell) + \frac{2}{\alpha}(\ell - y)\,\mathbb{1}\{y < \ell\} + \frac{2}{\alpha}(y - u)\,\mathbb{1}\{y > u\},
+\end{equation}
+which rewards narrow intervals and penalises observations falling outside them, with the penalty inversely proportional to $\alpha$. We report $\mathrm{IS}_{0.05}$, matching the 95\% credible/confidence intervals already used for the coverage and interval-length diagnostics.
+
+\paragraph{Reporting.}
+Both scores are computed per observation and averaged across test folds and regions, for each country and model, alongside the existing RMSE, MAE, and 95\% coverage.

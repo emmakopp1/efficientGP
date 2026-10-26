@@ -162,7 +162,7 @@ def evaluate_model(model, test_loader):
 # MC Dropout for Uncertainty Estimation
 # ============================================================================
 
-def mc_dropout_uncertainty(model, test_loader, n_samples=100):
+def mc_dropout_uncertainty(model, test_loader, n_samples=100, return_samples=False):
     """
     Perform MC Dropout to estimate prediction uncertainty
 
@@ -170,10 +170,13 @@ def mc_dropout_uncertainty(model, test_loader, n_samples=100):
         model: PyTorch model with dropout layers
         test_loader: DataLoader for test data
         n_samples: Number of forward passes to perform
+        return_samples: if True, also return the raw (n_samples, num_test_points)
+            draws, needed to compute an empirical CRPS / interval score
 
     Returns:
         mean_preds: Mean predictions across all samples
         std_preds: Standard deviation of predictions
+        all_preds (only if return_samples=True): raw draws, shape (n_samples, num_test_points)
     """
     model.train()  # Enable dropout during inference
     all_preds = []
@@ -187,6 +190,8 @@ def mc_dropout_uncertainty(model, test_loader, n_samples=100):
             all_preds.append(preds)
 
     all_preds = np.array(all_preds)  # Shape: (n_samples, num_test_points)
+    if return_samples:
+        return np.mean(all_preds, axis=0), np.std(all_preds, axis=0), all_preds
     return np.mean(all_preds, axis=0), np.std(all_preds, axis=0)
 
 

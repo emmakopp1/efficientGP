@@ -389,6 +389,24 @@ for i in range(0,6):
     df_plot.to_csv(output_path, index=False)
     print(f"Nigeria predictions for fold {i} saved to {output_path}")
 
+    # Draw samples from the predictive Normal in logit space (the posterior
+    # predictive distribution is Gaussian in logit space, not in FCS space)
+    # and back-transform, for an empirical CRPS / interval score comparable
+    # to the other models' draws (all reported on the FCS scale).
+    n_mc_samples = 100
+    logit_samples = np.random.normal(
+        loc=y_pred_logit[i][:, None], scale=sd_pred[i][:, None], size=(len(y_pred_logit[i]), n_mc_samples)
+    )
+    fcs_samples = logit_inverse(logit_samples)
+    mc_samples_df = pd.DataFrame(fcs_samples, columns=[f'sample_{m + 1}' for m in range(n_mc_samples)])
+    mc_samples_df.insert(0, 'adm1_name', X_test_dateid[i]["adm1_name"].values)
+    mc_samples_df.insert(0, 'Datetime', X_test_dateid[i]["Datetime"].values)
+    mc_samples_df['y_true'] = logit_inverse(y_test[i])
+    mc_samples_df['cv_fold'] = i
+    mc_samples_path = dir_output_br_prediction / f"nga_mc_samples_fold{i}.csv"
+    mc_samples_df.to_csv(mc_samples_path, index=False)
+    print(f"Nigeria MC samples for fold {i} saved to {mc_samples_path}")
+
 # ============================================================================
 # PLOTS - CHAD 
 # ============================================================================
@@ -413,5 +431,22 @@ for i in range(0,6):
     output_path_chad = dir_output_br_prediction_tcd / f"tcd_predictions_fold{i}.csv"
     df_plot_chad.to_csv(output_path_chad, index=False)
     print(f"Chad predictions for fold {i} saved to {output_path_chad}")
+
+    # Draw samples from the predictive Normal in logit space and back-transform
+    # (see Nigeria block above for rationale).
+    n_mc_samples = 100
+    logit_samples_chad = np.random.normal(
+        loc=y_pred_logit_chad[i][:, None], scale=sd_pred_chad[i][:, None],
+        size=(len(y_pred_logit_chad[i]), n_mc_samples)
+    )
+    fcs_samples_chad = logit_inverse(logit_samples_chad)
+    mc_samples_df_chad = pd.DataFrame(fcs_samples_chad, columns=[f'sample_{m + 1}' for m in range(n_mc_samples)])
+    mc_samples_df_chad.insert(0, 'adm1_name', X_test_dateid_chad[i]["adm1_name"].values)
+    mc_samples_df_chad.insert(0, 'Datetime', X_test_dateid_chad[i]["Datetime"].values)
+    mc_samples_df_chad['y_true'] = logit_inverse(y_test_chad[i])
+    mc_samples_df_chad['cv_fold'] = i
+    mc_samples_path_chad = dir_output_br_prediction_tcd / f"tcd_mc_samples_fold{i}.csv"
+    mc_samples_df_chad.to_csv(mc_samples_path_chad, index=False)
+    print(f"Chad MC samples for fold {i} saved to {mc_samples_path_chad}")
 
 

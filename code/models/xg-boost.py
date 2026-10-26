@@ -476,6 +476,7 @@ def main():
 
     all_results = []
     all_predictions = []
+    all_bootstrap_preds = []
 
     for cv_fold in cv_folds:
         print(f"\n{'#' * 80}")
@@ -567,6 +568,18 @@ def main():
             df_plot["ci_low"] = bootstrap_models_info["pred_lower"].values
             df_plot["ci_high"] = bootstrap_models_info["pred_upper"].values
 
+        # Keep raw per-bootstrap-model predictions (needed for empirical CRPS /
+        # interval score); row order matches df_test_model / test_df.
+        if "pred_boots" in bootstrap_models_info:
+            pred_boots = bootstrap_models_info["pred_boots"]
+            boot_df = pred_boots.copy()
+            boot_df.columns = [f'sample_{b + 1}' for b in range(pred_boots.shape[1])]
+            boot_df.insert(0, 'adm1_name', test_df["adm1_name"].values)
+            boot_df.insert(0, 'Datetime', pd.to_datetime(test_df["Datetime"]).values)
+            boot_df['y_true'] = test_df[Y_NAME].values
+            boot_df['cv_fold'] = cv_fold
+            all_bootstrap_preds.append(boot_df)
+
         # RMSE by region
         rmse_by_region = df_plot.groupby("adm1_name", group_keys=False).apply(
             lambda g: np.sqrt(np.mean((g["y_hat"] - g["y_true"]) ** 2))
@@ -625,6 +638,13 @@ def main():
             fold_file = os.path.join(args.output_data, f"predictions_cv{fold}.csv")
             df_fold.to_csv(fold_file, index=False)
             print(f"Fold {fold} predictions saved to {fold_file}")
+
+        # Raw bootstrap predictions (needed for empirical CRPS / interval score)
+        for boot_df in all_bootstrap_preds:
+            fold = int(boot_df["cv_fold"].iloc[0])
+            boot_file = os.path.join(args.output_data, f"bootstrap_preds_cv{fold}.csv")
+            boot_df.to_csv(boot_file, index=False)
+            print(f"Fold {fold} bootstrap predictions saved to {boot_file}")
 
         # Summary JSON
         summary = {

@@ -245,8 +245,10 @@ def evaluate_test_set(test_df, best_model, best_scaler, cv_fold, output_data_pat
     test_mse, _, test_preds_eval, test_actuals = evaluate_model(best_model, test_loader)
     print(f"\nTest MSE (eval mode) = {test_mse:.6f}")
 
-    # Get uncertainty estimates via MC Dropout
-    _, std_preds_mc = mc_dropout_uncertainty(best_model, test_loader, n_samples=n_mc_samples)
+    # Get uncertainty estimates via MC Dropout (raw draws kept for CRPS / interval score)
+    _, std_preds_mc, mc_samples = mc_dropout_uncertainty(
+        best_model, test_loader, n_samples=n_mc_samples, return_samples=True
+    )
 
     # Calculate confidence intervals
     test_preds_eval = np.array(test_preds_eval)
@@ -277,6 +279,19 @@ def evaluate_test_set(test_df, best_model, best_scaler, cv_fold, output_data_pat
         predictions_file = os.path.join(output_data_path, f'predictions_cv{cv_fold}.csv')
         df_plot.to_csv(predictions_file, index=False)
         print(f"Predictions saved to {predictions_file}")
+
+        # Save raw MC Dropout draws (needed for empirical CRPS / interval score)
+        mc_samples_df = pd.DataFrame(
+            mc_samples.T,
+            columns=[f'sample_{m + 1}' for m in range(mc_samples.shape[0])]
+        )
+        mc_samples_df.insert(0, 'adm1_name', test_df['adm1_name'].values)
+        mc_samples_df.insert(0, 'Datetime', pd.to_datetime(test_df['Datetime']).values)
+        mc_samples_df['y_true'] = test_df['fcs'].values
+        mc_samples_df['cv_fold'] = cv_fold
+        mc_samples_file = os.path.join(output_data_path, f'mc_samples_cv{cv_fold}.csv')
+        mc_samples_df.to_csv(mc_samples_file, index=False)
+        print(f"MC Dropout samples saved to {mc_samples_file}")
 
     return df_plot, test_mse
 
