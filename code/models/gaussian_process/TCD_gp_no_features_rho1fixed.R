@@ -11,7 +11,7 @@ country <- "Chad"
 iso3 <- "TCD"
 
 # Cross-validation parameters
-n_folds <- 1
+n_folds <- 5
 
 # Stan sampling parameters
 sampling_config <- list(
@@ -19,6 +19,7 @@ sampling_config <- list(
   Hurst2 = 0.5,
   warmup_init = 500,
   sampling_init = 1000,
+  adapt_delta_init = 0.8,
   n_chains = 4,
   n_parallel_chains = 4,
   max_attempts = 3,
