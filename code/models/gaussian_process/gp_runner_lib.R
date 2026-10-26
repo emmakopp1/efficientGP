@@ -120,7 +120,7 @@ run_gp_model <- function(
   # ========== CROSS-VALIDATION LOOP ==========
   # Implements region-based leave-one-region-out cross-validation
   # For each fold, one region is held out for testing, others used for training
-  for (i in 0:1) {
+  for (i in 0:n_folds) {
     cat("\n\n=============================================\n")
     cat("         CROSS-VALIDATION FOLD", i, "\n")
     cat("=============================================\n\n")
