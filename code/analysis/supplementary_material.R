@@ -349,9 +349,27 @@ rhat <- bind_rows(
   filter(cv_fold != 0) |>
   select(country, cv_fold, max_rhat)
 
-# Join rhat and rho
+# ESS (bulk), minimum across all model parameters, per fold.
+# Read from convergence_summary_cv<fold>.csv (one file per fold), since
+# final_cv_summary.csv only carries max_rhat, not ESS.
+read_min_ess_bulk <- function(path, country_label) {
+  diag_dir <- file.path(path, "convergence_diagnostics")
+  list.files(diag_dir, pattern = "^convergence_summary_cv\\d+\\.csv$", full.names = TRUE) |>
+    map_dfr(read_csv, show_col_types = FALSE) |>
+    mutate(country = country_label) |>
+    select(country, cv_fold, min_ess_bulk)
+}
+
+ess <- bind_rows(
+  read_min_ess_bulk(path_nigeria, "Nigeria"),
+  read_min_ess_bulk(path_chad, "Chad")
+) |>
+  filter(cv_fold != 0)
+
+# Join rhat, ess, and rho
 rho_rhat <- rho_cv |>
-  left_join(rhat, by = c("country", "cv_fold"))
+  left_join(rhat, by = c("country", "cv_fold")) |>
+  left_join(ess, by = c("country", "cv_fold"))
 
 rho_rhat
 
