@@ -1,15 +1,16 @@
 \begin{table}
 \caption{Metrics for Chad models}
 \label{tcd-tab-models}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-Model & RMSE & MAE & Coverage 95 & Length IC 95 \\
+Model & RMSE & MAE & Coverage 95 & Length IC 95 & CRPS & Interval Score 95 \\
 \midrule
-Bayesian Ridge & 0.065 & 0.055 & 0.601 & 0.116 \\
-GP no features & 0.053 & 0.046 & 0.966 & 0.287 \\
-Gp With Features & 0.052 & 0.045 & 0.959 & 0.243 \\
-MLP & 0.053 & 0.045 & 0.731 & 0.133 \\
-XG-Boost & 0.059 & 0.053 & 0.190 & 0.030 \\
+Bayesian Ridge & 0.063 & 0.051 & 0.634 & 0.117 & 0.036 & 0.607 \\
+GP No Features & 0.058 & 0.046 & 0.966 & 0.287 & 0.035 & 0.315 \\
+GP With Features & 0.051 & 0.042 & 0.990 & 0.243 & 0.029 & 0.246 \\
+MLP & 0.069 & 0.055 & 0.705 & 0.176 & 0.040 & 0.542 \\
+XG-Boost & 0.054 & 0.044 & 0.229 & 0.032 & 0.040 & 1.246 \\
 \bottomrule
 \end{tabular}
 \end{table}
+

@@ -401,7 +401,7 @@ for i in range(0,6):
     mc_samples_df = pd.DataFrame(fcs_samples, columns=[f'sample_{m + 1}' for m in range(n_mc_samples)])
     mc_samples_df.insert(0, 'adm1_name', X_test_dateid[i]["adm1_name"].values)
     mc_samples_df.insert(0, 'Datetime', X_test_dateid[i]["Datetime"].values)
-    mc_samples_df['y_true'] = logit_inverse(y_test[i])
+    mc_samples_df['y_true'] = logit_inverse(y_test[i]).values
     mc_samples_df['cv_fold'] = i
     mc_samples_path = dir_output_br_prediction / f"nga_mc_samples_fold{i}.csv"
     mc_samples_df.to_csv(mc_samples_path, index=False)
@@ -443,7 +443,7 @@ for i in range(0,6):
     mc_samples_df_chad = pd.DataFrame(fcs_samples_chad, columns=[f'sample_{m + 1}' for m in range(n_mc_samples)])
     mc_samples_df_chad.insert(0, 'adm1_name', X_test_dateid_chad[i]["adm1_name"].values)
     mc_samples_df_chad.insert(0, 'Datetime', X_test_dateid_chad[i]["Datetime"].values)
-    mc_samples_df_chad['y_true'] = logit_inverse(y_test_chad[i])
+    mc_samples_df_chad['y_true'] = logit_inverse(y_test_chad[i]).values
     mc_samples_df_chad['cv_fold'] = i
     mc_samples_path_chad = dir_output_br_prediction_tcd / f"tcd_mc_samples_fold{i}.csv"
     mc_samples_df_chad.to_csv(mc_samples_path_chad, index=False)

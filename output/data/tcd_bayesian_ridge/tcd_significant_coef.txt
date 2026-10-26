@@ -114,3 +114,63 @@ currency_exchange_log -0.2392224796097065
 ndvi_value_cubic_intp -0.039469179945609965
 food_inflation_cubic_intp -0.05957418169408166
 Waterways -0.05073508087026332
+cv fold 0 significant variables:
+currency_exchange_log -0.24234444183125853
+ndvi_value_cubic_intp -0.059228549731534214
+food_inflation_cubic_intp -0.06311949058001447
+Waterways -0.08500191653866347
+cv fold 1 significant variables:
+currency_exchange_log -0.2387514130481023
+ndvi_value_cubic_intp -0.07566388235788582
+food_inflation_cubic_intp -0.060734452736424124
+Waterways -0.026522809598957996
+cv fold 2 significant variables:
+currency_exchange_log -0.2568622351944787
+ndvi_value_cubic_intp -0.004898722706229895
+food_inflation_cubic_intp -0.03598631792668516
+Waterways -0.028276789645053976
+cv fold 3 significant variables:
+currency_exchange_log -0.22568038274027752
+ndvi_value_cubic_intp -0.07670254646210063
+food_inflation_cubic_intp -0.07319611579790199
+Waterways -0.008080873903384196
+cv fold 4 significant variables:
+currency_exchange_log -0.2514525989221887
+ndvi_value_cubic_intp -0.02310480450003273
+food_inflation_cubic_intp -0.05738941332592362
+Waterways -0.06737307991005734
+cv fold 5 significant variables:
+currency_exchange_log -0.2307793824982106
+ndvi_value_cubic_intp -0.05574431994391504
+food_inflation_cubic_intp -0.06799131275627485
+Waterways -0.05278220189007431
+cv fold 0 significant variables:
+currency_exchange_log -0.24234444183125853
+ndvi_value_cubic_intp -0.059228549731534214
+food_inflation_cubic_intp -0.06311949058001447
+Waterways -0.08500191653866347
+cv fold 1 significant variables:
+currency_exchange_log -0.2387514130481023
+ndvi_value_cubic_intp -0.07566388235788582
+food_inflation_cubic_intp -0.060734452736424124
+Waterways -0.026522809598957996
+cv fold 2 significant variables:
+currency_exchange_log -0.2568622351944787
+ndvi_value_cubic_intp -0.004898722706229895
+food_inflation_cubic_intp -0.03598631792668516
+Waterways -0.028276789645053976
+cv fold 3 significant variables:
+currency_exchange_log -0.22568038274027752
+ndvi_value_cubic_intp -0.07670254646210063
+food_inflation_cubic_intp -0.07319611579790199
+Waterways -0.008080873903384196
+cv fold 4 significant variables:
+currency_exchange_log -0.2514525989221887
+ndvi_value_cubic_intp -0.02310480450003273
+food_inflation_cubic_intp -0.05738941332592362
+Waterways -0.06737307991005734
+cv fold 5 significant variables:
+currency_exchange_log -0.2307793824982106
+ndvi_value_cubic_intp -0.05574431994391504
+food_inflation_cubic_intp -0.06799131275627485
+Waterways -0.05278220189007431
