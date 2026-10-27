@@ -12,7 +12,7 @@ country <- "Chad"
 iso3 <- "TCD"
 
 # Cross-validation parameters
-n_folds <- 1
+n_folds <- 5
 
 # Fixer rho1
 sampling_config <- list(
@@ -27,8 +27,8 @@ sampling_config <- list(
 )
 
 model_config <- list(
-  prior_type = "normal",
-  hyper_prior_param = "beta_sigma"
+  prior_type = "ridge_centered",
+  hyper_prior_param = "kappa"
 )
 
 # Stan file to use
