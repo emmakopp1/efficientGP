@@ -1,6 +1,6 @@
 #include GP_helper.stan
 // Sensitivity model for dependence induced by overlapping rolling survey windows.
-// Same mean and additive GP structure as GPstCOV_rho1fixed_normal_prior.stan, plus
+// Same mean and additive GP structure as GPstCOV_rho1fixed_ridge_centered_prior.stan, plus
 // a region-specific overlap error e_r ~ N(0, tau_ov^2 * R_ov), independent across regions:
 //   K_y = alpha0^2 * (J_S + alpha1^2 K1c) (x) (J_T + K2c) + sigma1^2 * I_S (x) J_T
 //         + tau_ov^2 * I_S (x) R_ov + sigma^2 * I
@@ -84,7 +84,7 @@ parameters {
   real<lower=0> sigma1 ; // random effect for space
   real<lower=0> sigma ;
   vector[P] beta ; // regression coefficients
-  real<lower=0> beta_sd; // hyperprior for beta variance
+  real<lower=0> kappa ; // global shrinkage parameter for ridge prior
   real<lower=0> tau_ov ; // marginal sd of the overlap error
 }
 model{ // prior + likelihood
@@ -96,9 +96,11 @@ model{ // prior + likelihood
   target += inv_gamma_lpdf(rho2|2,5);
   target += lognormal_lpdf(sigma1|0,1);
   target += lognormal_lpdf(sigma|0,1);
-  target += exponential_lpdf(beta_sd|1); // ridge prior on beta
-  target += normal_lpdf(beta|0, beta_sd); // normal prior on beta
   target += normal_lpdf(tau_ov|0, tau_ov_scale); // half-normal, allows tau_ov -> 0
+
+  // Ridge Bayesian prior on beta
+  kappa ~ gamma(0.5, 0.5);
+  beta ~ multi_normal(rep_vector(0, P), (1/kappa) * identity_matrix(P));
 
   //likelihood
   // Z[,j] ~ N(H[,j], A_j), j = 1..N1, with Z = Y Q1 and H = M Q1

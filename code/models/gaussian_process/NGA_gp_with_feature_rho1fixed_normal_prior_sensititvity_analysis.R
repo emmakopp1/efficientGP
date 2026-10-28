@@ -9,7 +9,7 @@ source(file.path(here(), "code", "models", "gaussian_process", "gp_runner_lib.R"
 # ==================== CONFIGURATION ====================
 # Sensitivity analysis: dependence induced by overlapping 90-day rolling
 # survey windows, modelled with a region-specific overlap error
-# tau_ov^2 * R_ov (see GPstCOV_rho1fixed_normal_prior_overlap.stan).
+# tau_ov^2 * R_ov (see NGA_GPstCOV_rho1fixed_normal_prior_sensitive_analysis.stan).
 # Same data, folds, features and sampling settings as the reference model
 # NGA_gp_with_feature_rho1fixed_normal_prior.R, for comparability.
 country <- "Nigeria"
@@ -39,7 +39,7 @@ model_config <- list(
 )
 
 # Stan file to use
-stan_file_name <- "GPstCOV_rho1fixed_normal_prior_overlap.stan"
+stan_file_name <- "NGA_GPstCOV_rho1fixed_normal_prior_sensitive_analysis.stan"
 
 # Selected features (by SHAP)
 # Matches the reference run NGA_gp_with_features_normal_centered_20260217_155435
