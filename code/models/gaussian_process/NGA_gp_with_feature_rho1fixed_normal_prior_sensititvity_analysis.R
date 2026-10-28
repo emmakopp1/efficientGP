@@ -49,7 +49,7 @@ selected_features <- c(
   "ndvi_anomaly_cubic_intp",
   "log_currency_exchange",
   "log_Area",
-  "Muslim",
+  #"Muslim",
   "log_food_inflation",
   "log_food_inflation_MPI",
   "log_fatalities_explosions",

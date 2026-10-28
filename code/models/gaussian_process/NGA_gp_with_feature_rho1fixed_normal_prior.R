@@ -44,7 +44,7 @@ selected_features <- c(
   "log_currency_exchange",
   "log_Area",
   "MPI_intensity",
-  "Muslim",
+  #"Muslim",
   "log_food_inflation_MPI",
   "log_fatalities_explosions",
   "MPI",
