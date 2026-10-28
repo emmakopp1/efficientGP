@@ -99,6 +99,7 @@ MCMC estimation is performed via [CmdStanR](https://mc-stan.org/cmdstanr/) (4 ch
 | Bayesian Ridge | scikit-learn `BayesianRidge` | Posterior predictive variance |
 | MLP | PyTorch — 3 hidden layers, MC Dropout | Monte Carlo Dropout samples |
 | XGBoost | xgboost + scikit-learn `GridSearchCV` | Bootstrap confidence intervals |
+| BYM2 | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, RW1 + iid temporal effects, ridge prior on covariates | Posterior predictive distribution |
 
 All benchmarks share the same leave-one-region-out CV folds and the same standardised feature matrices produced by the GP pipeline.
 
@@ -213,6 +214,17 @@ python code/models/xg-boost.py \
 
 # Bayesian Ridge (paths are set inside the script)
 python code/models/bayesian_ridge.py
+```
+
+### Step 3b — Fit the BYM2 benchmark
+
+Build the admin1 adjacency graphs once (requires `geopandas` and `libpysal`), then fit the model with the same folds, covariates and standardisation as the GP. Outputs are written to `output/bym2/` with the same structure as the GP outputs.
+
+```bash
+python code/models/bym/build_adjacency.py
+
+nohup Rscript code/models/bym/NGA_bym2_ridge_prior.R > output/logs/nga_bym2.log 2>&1 &
+nohup Rscript code/models/bym/TCD_bym2_ridge_prior.R > output/logs/tcd_bym2.log 2>&1 &
 ```
 
 ### Step 4 — Analysis and figures

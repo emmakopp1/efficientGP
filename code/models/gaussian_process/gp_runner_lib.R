@@ -462,3 +462,394 @@ run_gp_model <- function(
     llkd = post_mean_llkd
   ))
 }
+
+# ============================================================
+# Sensitivity-analysis runner: dependence induced by overlapping
+# rolling survey windows (GPstCOV_rho1fixed_normal_prior_overlap.stan).
+#
+# Identical to run_gp_model(), except that the training data list passed
+# to Stan also carries t_days: the observation dates (in days since the
+# first training date), used by the Stan model to build the triangular
+# overlap-correlation matrix R_ov. Only Nigeria is supported for now.
+# ============================================================
+run_gp_model_overlap <- function(
+  country,
+  iso3,
+  n_folds,
+  sampling_config,
+  model_config,
+  selected_features,
+  stan_file_name,
+  topdir = here::here()
+) {
+  # Load required packages
+  library(ggplot2)
+  library(dplyr)
+  library(readr)
+  library(bayesplot)
+  library(cmdstanr)
+  library(posterior)
+  library(here)
+
+  # Load utility functions for data processing, MCMC diagnostics, and visualization
+  source(file.path(topdir, "code", "models", "utils", "convergence.R"))
+  source(file.path(topdir, "code", "models", "utils", "data_prep.R"))
+  source(file.path(topdir, "code", "models", "utils", "diagnostic.R"))
+
+  if (country != "Nigeria") {
+    stop("run_gp_model_overlap() currently only supports country = \"Nigeria\"")
+  }
+
+  # ========== DATA LOADING AND PREPROCESSING ==========
+  # Load weekly timeseries data with covariate features
+  file <- paste0(country, "-weekly-with-features.csv")
+  df <- read.csv(
+    file.path(topdir, "data", "new", country, file),
+    header = TRUE
+  )
+  # Sort by region and datetime for spatio-temporal organization
+  df <- df[order(df$adm1_name, df$Datetime), ]
+
+  # Load static administrative region data (e.g., coordinates, region IDs)
+  file <- paste0(country, "-static-data.csv")
+  df_loc <- read.csv(
+    file.path(topdir, "data", "new", country, file),
+    header = TRUE
+  )
+
+  # ========== FEATURE ENGINEERING ==========
+  df <- create_features(df, country)
+  # Validate that all requested features exist after preprocessing
+  missing_features <- setdiff(selected_features, names(df))
+  if (length(missing_features) > 0) {
+    stop("Missing features after preprocessing: ", paste(missing_features, collapse = ", "))
+  }
+
+  # ========== CROSS-VALIDATION SETUP ==========
+  # Filter to survey data (90-day observations) for CV structure
+  region_90 <- df$adm1_code[df$data_type == "SURVEY 90 days"] |> unique()
+  region_90_name <- df$adm1_name[df$data_type == "SURVEY 90 days"] |> unique()
+  df_90 <- df[df$data_type == "SURVEY 90 days", ]
+
+  # test set for nigeria
+  region_pred <- df$adm1_code[df$data_type == "PREDICTION"] |> unique()
+  region_pred_name <- df$adm1_name[df$data_type == "PREDICTION"] |> unique()
+  df_pred <- df[df$data_type == "PREDICTION", ]
+
+  # ========== STAN MODEL COMPILATION ==========
+  stan_path <- file.path(topdir, "code", "models", "stan")
+  stan_file <- file.path(stan_path, stan_file_name)
+  mod <- cmdstanr::cmdstan_model(stan_file, include_paths = stan_path)
+
+  # Generate beta parameter names corresponding to selected features
+  betas <- paste0("beta", seq_along(selected_features))
+
+  # ========== OUTPUT DIRECTORY STRUCTURE ==========
+  # Create timestamped output directory to track model runs
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  output_path_top <- file.path(topdir, "output")
+
+  # Determine model variant name for organization
+  model_variant <- if (length(selected_features) > 0) "gp_with_features" else "gp"
+
+  output_path <- file.path(
+    output_path_top,
+    "gaussian_process",
+    paste0(
+      iso3, "_",
+      model_variant, "_",
+      model_config$prior_type, "_",
+      "sensitive_analysis", "_",
+      timestamp
+    )
+  )
+  if (!dir.exists(output_path)) dir.create(output_path, recursive = TRUE)
+
+  # Convergence diagnostics: trace plots, Rhat/ESS plots, autocorrelation
+  diagnostics_path <- file.path(output_path, "convergence_diagnostics")
+  if (!dir.exists(diagnostics_path)) dir.create(diagnostics_path, recursive = TRUE)
+
+  # Prior-posterior comparison and posterior predictive checks
+  prior_posterior_path <- file.path(output_path, "prior_posterior_diagnostics")
+  if (!dir.exists(prior_posterior_path)) dir.create(prior_posterior_path, recursive = TRUE)
+
+  # Preprocessed train/test datasets for downstream deep learning applications
+  path_data_train <- file.path(output_path, "data_train")
+  path_data_test <- file.path(output_path, "data_test")
+
+  # ========== INITIALIZE RESULT CONTAINERS ==========
+  rMSE <- c()
+  MAE <- c()
+  convergence_results <- list()
+  beta_diagnostics_all <- list()
+  ppc_diagnostics_all <- list()
+
+  # ========== CROSS-VALIDATION LOOP ==========
+  # Implements region-based leave-one-region-out cross-validation
+  for (i in 0:n_folds) {
+    cat("\n\n=============================================\n")
+    cat("         CROSS-VALIDATION FOLD", i, "\n")
+    cat("=============================================\n\n")
+
+    # ========== DATA SPLIT ==========
+    # train region
+    train_region <- df_90$adm1_code[df_90$cv_ind != i] |> unique()
+    train_region_name <- df_90$adm1_name[df_90$cv_ind != i] |> unique()
+
+    # test region
+    test_region <- df_90$adm1_code[df_90$cv_ind == i] |> unique()
+    test_region_name <- df_90$adm1_name[df_90$cv_ind == i] |> unique()
+    if (length(test_region_name) == 0) next
+
+    # pred region
+    pred_region <- df_pred |>
+      pull(adm1_code) |>
+      unique()
+    pred_region_name <- df_pred |>
+      pull(adm1_name) |>
+      unique()
+
+    y_transform <- sampling_config$y_transform
+
+    # Save preprocessed train/test splits for external analysis
+    save_data_set(df_90, df_loc, i, selected_features, path_data_train, path_data_test)
+
+    # ========== DATA STANDARDIZATION ==========
+    data_list_tr <- prep_stan_data(
+      df_90, df_loc, train_region,
+      y_transform = sampling_config$y_transform, # Apply logit(FCS)
+      features = selected_features,
+      standardize = TRUE # Center and scale covariates
+    )
+
+    # Extract standardization parameters computed from TRAINING data
+    cov_mean <- data_list_tr$cov_mean
+    cov_sd <- data_list_tr$cov_sd
+    data_tes_process <- prep_stan_data_pred(
+      df_90, df_loc, test_region,
+      features = selected_features,
+      standardize = TRUE,
+      cov_mean = cov_mean,
+      cov_sd = cov_sd
+    )
+
+    # ========== OVERLAP SENSITIVITY ANALYSIS: ADD t_days ==========
+    # The overlap model needs the observation dates (in days since the first
+    # training date) to build the triangular overlap-correlation matrix R_ov.
+    # df_train mirrors the training split built by prep_stan_data(): rows for
+    # the training regions, sorted by region then Datetime (df_90 is already
+    # sorted that way), so the first N2 rows give the common time grid shared
+    # by all regions.
+    df_train <- df_90[df_90$adm1_code %in% train_region, ]
+    dates <- as.Date(df_train$Datetime[1:data_list_tr$N2])
+    data_list_tr$t_days <- as.numeric(dates - dates[1])
+
+    saveRDS(cov_mean, file = file.path(output_path, paste0("cov_mean_fold_", i, ".rds")))
+    saveRDS(cov_sd, file = file.path(output_path, paste0("cov_sd_fold_", i, ".rds")))
+
+    # Combine train and test data lists for Stan sampling
+    data_list <- append(data_list_tr, data_tes_process[[1]])
+
+    # Add spatial/temporal parameters to data list
+    data_list_est <- append(
+      data_list,
+      list(
+        rho1 = sampling_config$rho1[i + 1], # Spatial range parameter
+        Hurst2 = sampling_config$Hurst2 # Matérn smoothness
+      )
+    )
+
+    n1 <- data_tes_process[[1]]$n1
+    n2 <- data_tes_process[[1]]$n2
+
+    # ========== GP DATA SIZE SUMMARY ==========
+    cat("  Gaussian Process Data Size:\n")
+    cat("    - Spatial locations in the train set (N1):", data_list_tr$N1, "\n")
+    cat("    - Spatial locations in the test set (n1):", data_tes_process[[1]]$n1, "\n")
+    cat("    - Temporal observations per location in the train (N2):", data_list$N2, "\n")
+    cat("    - Temporal observations per location in the test (n2):", data_tes_process[[1]]$n2, "\n")
+    cat("    - Total observations in the train:", data_list_tr$N1 * data_list$N2, "\n")
+    cat("    - Total observations in the test:", data_tes_process[[1]]$n1 * data_tes_process[[1]]$n2, "\n")
+    cat("    - Value of rho1 parameter:", sampling_config$rho1[i + 1], "\n")
+    if (length(selected_features) > 0) {
+      cat("    - Number of features:", length(selected_features), "\n")
+    }
+    cat("\\n")
+
+    # ========== STAN SAMPLING WITH ADAPTIVE CONVERGENCE ==========
+    fit <- adaptive_sample(
+      mod,
+      data_list_est,
+      seed = i, # Fold-specific seed for reproducibility
+      max_attempts = sampling_config$max_attempts,
+      warmup_init = sampling_config$warmup_init,
+      sampling_init = sampling_config$sampling_init,
+      n_chains = sampling_config$n_chains,
+      n_parallel_chains = sampling_config$n_parallel_chains,
+      adapt_delta_init = sampling_config$adapt_delta_init
+    )
+
+    fit$save_object(file = file.path(output_path, paste0("fit_cv", i, ".rds")))
+
+    # ========== DIAGNOSTIC GENERATION ==========
+    convergence_results[[as.character(i + 1)]] <- check_convergence(fit, i, diagnostics_path)
+
+    create_convergence_plots(
+      fit, i, diagnostics_path,
+      selected_features = selected_features,
+      hyperprior = model_config$hyper_prior_param
+    )
+
+    # ========== POSTERIOR ANALYSIS ==========
+    beta_diagnostics_all[[as.character(i + 1)]] <- extract_beta_diagnostics(
+      fit = fit,
+      cv_fold = i,
+      prior_posterior_path = prior_posterior_path,
+      selected_features = selected_features
+    )
+
+    extract_posterior_mean(
+      fit = fit,
+      cv_fold = i,
+      output_path = output_path
+    )
+
+    post_mean_llkd <- extract_posterior_mean_llkd(
+      fit = fit,
+      cv_fold = i,
+      output_path = output_path
+    )
+
+    # ========== MODEL EVALUATION ==========
+    ppc_diagnostics_all[[as.character(i + 1)]] <- extract_posterior_predictive_data(
+      fit = fit,
+      y_true = data_tes_process[[2]],
+      cv_fold = i,
+      prior_posterior_path = prior_posterior_path,
+      n1 = n1,
+      n2 = n2,
+      y_transform = sampling_config$y_transform,
+      adm1_code = rep(test_region, each = n2),
+      adm1_name = rep(test_region_name, each = n2),
+      datetime = rep(as.Date(df$Datetime[1:n2], tz = "GMT"), times = n1)
+    )
+
+    # Calculate performance metrics for this fold
+    rMSE <- c(rMSE, sqrt(mean(ppc_diagnostics_all[[as.character(i + 1)]]$residual^2)))
+    MAE <- c(MAE, mean(abs(ppc_diagnostics_all[[as.character(i + 1)]]$residual)))
+  }
+
+  # ========== FINAL SUMMARY AND REPORTING ==========
+  cat("\n\n=============================================\n")
+  cat("         FINAL RESULTS SUMMARY\n")
+  cat("=============================================\n\n")
+
+  cat("Model Performance:\n")
+  cat("  Mean rMSE:", round(mean(rMSE), 4), "\n")
+  cat("  Mean MAE:", round(mean(MAE), 4), "\n\n")
+
+  cat("Convergence Summary Across Folds:\n")
+  for (i in 1:length(convergence_results)) {
+    cat(
+      "  CV Fold", i, "- Max Rhat:",
+      round(convergence_results[[as.character(i)]]$diagnostics$max_rhat, 4),
+      "| Converged:", convergence_results[[as.character(i)]]$converged, "\n"
+    )
+  }
+
+  # Create comprehensive summary table and save
+  folds_completed <- as.numeric(names(convergence_results)) - 1
+
+  final_summary <- data.frame(
+    cv_fold = folds_completed,
+    rMSE = rMSE,
+    MAE = MAE,
+    converged = sapply(convergence_results, function(x) x$converged),
+    max_rhat = sapply(convergence_results, function(x) x$diagnostics$max_rhat)
+  )
+
+  write.csv(final_summary, file.path(output_path, "final_cv_summary.csv"), row.names = FALSE)
+
+  # ========== BETA COEFFICIENT ANALYSIS ==========
+  if (length(selected_features) > 0) {
+    cat("\n=============================================\n")
+    cat("         BETA COEFFICIENTS SUMMARY\n")
+    cat("=============================================\n\n")
+
+    all_beta_summary <- do.call(rbind, beta_diagnostics_all)
+    write.csv(all_beta_summary,
+      file.path(prior_posterior_path, "beta_summary_all_folds.csv"),
+      row.names = FALSE
+    )
+
+    beta_avg_summary <- all_beta_summary %>%
+      group_by(feature, beta_name) %>%
+      summarise(
+        avg_posterior_mean = mean(posterior_mean),
+        avg_posterior_sd = mean(posterior_sd),
+        avg_prob_positive = mean(prob_positive),
+        times_includes_zero = sum(includes_zero),
+        avg_rhat = mean(rhat),
+        min_ess_bulk = min(ess_bulk),
+        .groups = "drop"
+      )
+
+    write.csv(beta_avg_summary,
+      file.path(prior_posterior_path, "beta_summary_averaged.csv"),
+      row.names = FALSE
+    )
+
+    cat("Beta Coefficients (averaged across folds):\n")
+    print(beta_avg_summary, n = Inf)
+  } else {
+    cat("\n=============================================\n")
+    cat("         NO BETA COEFFICIENTS\n")
+    cat("=============================================\n")
+    cat("No features selected - skipping beta analysis\n")
+  }
+
+  # ========== POSTERIOR PREDICTIVE CHECK ==========
+  all_ppc_summary <- do.call(rbind, ppc_diagnostics_all)
+  write.csv(all_ppc_summary,
+    file.path(prior_posterior_path, "ppc_summary_all_folds.csv"),
+    row.names = FALSE
+  )
+
+  cat("\n=============================================\n")
+  cat("    POSTERIOR PREDICTIVE CHECK SUMMARY\n")
+  cat("=============================================\n\n")
+
+  ppc_stats <- all_ppc_summary %>%
+    group_by(cv_fold) %>%
+    summarise(
+      n_observations = n(),
+      coverage_95 = mean(in_ci_95) * 100,
+      mean_abs_residual = mean(abs(residual)),
+      rmse = sqrt(mean(residual^2)),
+      .groups = "drop"
+    )
+
+  write.csv(ppc_stats,
+    file.path(prior_posterior_path, "ppc_statistics_by_fold.csv"),
+    row.names = FALSE
+  )
+
+  cat("Posterior Predictive Check Statistics:\n")
+  print(ppc_stats, n = Inf)
+
+  # ========== COMPLETION MESSAGE ==========
+  cat("\n✓ All diagnostics saved!\n")
+  cat("  - Convergence diagnostics:", diagnostics_path, "\n")
+  cat("  - Beta and PPC diagnostics:", prior_posterior_path, "\n")
+
+  # ========== RETURN RESULTS ==========
+  invisible(list(
+    rMSE = rMSE,
+    MAE = MAE,
+    convergence_results = convergence_results,
+    beta_diagnostics_all = beta_diagnostics_all,
+    ppc_diagnostics_all = ppc_diagnostics_all,
+    output_path = output_path,
+    llkd = post_mean_llkd
+  ))
+}
