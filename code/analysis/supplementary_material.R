@@ -113,6 +113,7 @@ df_coef_chad <- map_dfr(0:5, function(i) {
   read_csv(path_i, show_col_types = FALSE) %>%
     mutate(cv_fold = i)  # Convert to 1-6 for display
 }) %>%
+  filter(cv_fold != 0) %>%  # fold 0 is never a held-out test fold
   mutate(
     feature_clean = unname(feature_map_chad[feature]),
     feature_clean = factor(feature_clean, levels = desired_order_chad)

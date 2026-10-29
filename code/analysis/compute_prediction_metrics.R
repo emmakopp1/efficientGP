@@ -56,6 +56,8 @@ metrics_gp <- function(run_dir) {
     draws <- as.matrix(samples[, sample_cols])
 
     tibble(
+      cv_fold = cv_fold,
+      adm1_name = summary$adm1_name,
       y_true = summary$y_true,
       y_hat = summary$y_pred_mean,
       ci_low = summary$y_pred_ci_2.5,
@@ -80,6 +82,8 @@ metrics_bym <- function(run_dir) {
     draws <- as.matrix(samples[, sample_cols])
 
     tibble(
+      cv_fold = cv_fold,
+      adm1_name = summary$adm1_name,
       y_true = summary$y_true,
       y_hat = summary$y_pred_mean,
       ci_low = summary$y_pred_ci_2.5,
@@ -103,6 +107,8 @@ metrics_mlp <- function(data_dir) {
     draws <- as.matrix(samples[, sample_cols])
 
     tibble(
+      cv_fold = fold,
+      adm1_name = preds$adm1_name,
       y_true = preds$y_true,
       y_hat = preds$y_hat,
       ci_low = preds$ci_low,
@@ -126,6 +132,8 @@ metrics_xgboost <- function(data_dir) {
     draws <- as.matrix(samples[, sample_cols])
 
     tibble(
+      cv_fold = fold,
+      adm1_name = preds$adm1_name,
       y_true = preds$y_true,
       y_hat = preds$y_hat,
       ci_low = preds$ci_low,
@@ -136,19 +144,31 @@ metrics_xgboost <- function(data_dir) {
 }
 
 # ============================================================================
-# Summarise one model's per-observation metrics into a single table row
+# Summarise one model's per-observation metrics into a single table row.
+# Matches the original metrics.py aggregation: metrics are computed per
+# (cv_fold, adm1_name) group, averaged over folds within each region, then
+# averaged over regions (not pooled over all observations directly).
 # ============================================================================
 summarise_model <- function(df, model_name) {
   df <- df |> filter(!is.na(y_true), !is.na(y_hat))
-  tibble(
-    Model = model_name,
-    RMSE = sqrt(mean((df$y_hat - df$y_true)^2)),
-    MAE = mean(abs(df$y_hat - df$y_true)),
-    `Coverage 95` = mean(df$y_true >= df$ci_low & df$y_true <= df$ci_high),
-    `Length IC 95` = mean(df$ci_high - df$ci_low),
-    CRPS = mean(df$crps),
-    `Interval Score 95` = mean(interval_score(df$y_true, df$ci_low, df$ci_high))
-  )
+
+  per_region_fold <- df |>
+    group_by(cv_fold, adm1_name) |>
+    summarise(
+      RMSE = sqrt(mean((y_hat - y_true)^2)),
+      MAE = mean(abs(y_hat - y_true)),
+      `Coverage 95` = mean(y_true >= ci_low & y_true <= ci_high),
+      `Length IC 95` = mean(ci_high - ci_low),
+      CRPS = mean(crps),
+      `Interval Score 95` = mean(interval_score(y_true, ci_low, ci_high)),
+      .groups = "drop"
+    )
+
+  per_region_fold |>
+    group_by(adm1_name) |>
+    summarise(across(c(RMSE, MAE, `Coverage 95`, `Length IC 95`, CRPS, `Interval Score 95`), mean), .groups = "drop") |>
+    summarise(across(c(RMSE, MAE, `Coverage 95`, `Length IC 95`, CRPS, `Interval Score 95`), mean)) |>
+    mutate(Model = model_name, .before = 1)
 }
 
 # ============================================================================

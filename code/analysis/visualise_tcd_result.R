@@ -209,6 +209,10 @@ df_all <- df_all |>
 # Custom labeller: hide labels for padding panels
 lab_hide_pad <- function(x) ifelse(str_detect(x, "__pad"), "", x)
 
+# Fold 0 ("fixed") is never a held-out test fold (see STEP 8); plots below
+# exclude it while keeping panel_levels intact for anything that needs it
+panel_levels_no0 <- panel_levels[!str_detect(panel_levels, "^CV 0:")]
+
 
 model_cols <- c(
   "GP" = "#1B7837",
@@ -218,15 +222,19 @@ model_cols <- c(
 )
 
 
-gg <- ggplot(df_all, aes(x = Datetime, y = poor_fcs, color = model, linetype = model)) +
+df_all_plot <- df_all |>
+  filter(cv_ind != 0) |>
+  mutate(cv_ind_adm1_name = factor(as.character(cv_ind_adm1_name), levels = panel_levels_no0))
+
+gg <- ggplot(df_all_plot, aes(x = Datetime, y = poor_fcs, color = model, linetype = model)) +
   geom_ribbon(
-    data = df_all |> filter(model != "True"),
+    data = df_all_plot |> filter(model != "True"),
     aes(ymin = ci_low, ymax = ci_high, fill = model),
     alpha = 0.3,
     color = NA
   ) +
-  geom_line(data = df_all |> filter(model != "True"), linewidth = 0.6) +
-  geom_line(data = df_all |> filter(model == "True"), linewidth = 0.7) +
+  geom_line(data = df_all_plot |> filter(model != "True"), linewidth = 0.6) +
+  geom_line(data = df_all_plot |> filter(model == "True"), linewidth = 0.7) +
   facet_wrap(
     ~cv_ind_adm1_name,
     ncol = 4,
@@ -388,6 +396,7 @@ tab_coverage <- make_metric_table(
 tab_coverage
 
 df_plot_metrics <- df_all_metrics |>
+  filter(cv_ind != 0) |>
   mutate(cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name)) |>
   pivot_longer(
     cols = c(rmse, mae),
@@ -400,7 +409,7 @@ df_plot_metrics <- df_all_metrics |>
   mutate(
     metric = recode(metric, rmse = "RMSE", mae = "MAE")
   ) |>
-  mutate(cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels))
+  mutate(cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels_no0))
 
 
 gg <- ggplot(df_plot_metrics |> filter(metric == "RMSE"), aes(x = model, y = value)) +
@@ -426,11 +435,12 @@ ggsave(
 )
 
 df_plot_rmse <- df_all_metrics |>
+  filter(cv_ind != 0) |>
   mutate(cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name)) |>
   group_by(cv_ind, adm1_name) |>
   mutate(is_best = rmse == min(rmse, na.rm = TRUE)) |>
   ungroup() |>
-  mutate(cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels))
+  mutate(cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels_no0))
 
 gg <- ggplot(
   df_plot_rmse,
@@ -517,12 +527,12 @@ df_gp_all <- bind_rows(df_gp_comparison, df_true) %>%
     )
   )
 
-# Apply same panel levels for consistent layout with padding
+# Apply same panel levels for consistent layout with padding (fold 0 excluded,
+# as it is never a held-out test fold; see STEP 8)
 df_gp_all <- df_gp_all %>%
-  mutate(
-    cv_ind = as.integer(cv_ind),
-    cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels)
-  )
+  mutate(cv_ind = as.integer(cv_ind)) %>%
+  filter(cv_ind != 0) %>%
+  mutate(cv_ind_adm1_name = factor(as.character(cv_ind_adm1_name), levels = panel_levels_no0))
 
 # Define colors for GP comparison (same as Nigeria: orange for with, green for without)
 gp_comparison_cols <- c(
