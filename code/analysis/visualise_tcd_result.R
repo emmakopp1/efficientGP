@@ -3,7 +3,7 @@
 # ============================================================================
 # This script compares 3 different models for predicting food insecurity in Chad:
 # 1. Gaussian Process (GP)
-# 2. Bayesian Ridge Regression
+# 2. BYM2
 # 3. Multi-Layer Perceptron (MLP)
 #
 # It generates:
@@ -24,9 +24,9 @@ library(sf)
 path_tcd <- c(
   file.path(
     "output", "gaussian_process",
-    "TCD_gp_with_features_ridge_centered_20251216_114735"
+    "TCD_gp_with_features_ridge_centered_20261026_132935"
   ),
-  file.path("output", "data", "tcd_bayesian_ridge"),
+  file.path("output", "bym2", "TCD_bym2_with_features_ridge_20261029_094441"),
   file.path("output", "data", "tcd_mlp"),
   file.path("output","data","tcd_xg_boost")
 )
@@ -35,14 +35,23 @@ path_tcd <- c(
 # STEP 1: Load predictions from all models (6-fold cross-validation: 0-5)
 # ============================================================================
 
-# ---- Bayesian Ridge ----
-# Load Bayesian Ridge predictions for each CV fold (0 to 5)
+# ---- BYM2 ----
+# Load BYM2 predictions for each CV fold (0 to 5), read directly from the MCMC
+# diagnostics, same layout as the GP output
 path <- path_tcd[[2]]
-df_bayesian_ridge <- map_dfr(0:5, function(i) {
-  read_csv(file.path(path, sprintf("tcd_predictions_fold%d.csv", i)), show_col_types = FALSE) %>%
+df_bym2 <- map_dfr(0:5, function(i) {
+  path_i <- file.path(path, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
+
+  read_csv(path_i, show_col_types = FALSE) %>%
+    rename(
+      y_hat   = y_pred_mean,
+      ci_low  = `y_pred_ci_2.5`,
+      ci_high = `y_pred_ci_97.5`
+    ) %>%
+    select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
     mutate(
       cv_ind = i,
-      model  = "bayesian ridge"
+      model  = "bym2"
     )
 })
 
@@ -123,7 +132,7 @@ df_true <- df_gp |>
   )
 
 # Combine all model predictions with harmonized column names
-df_pred <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
+df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   transmute(
     Datetime,
     adm1_name,
@@ -143,14 +152,14 @@ df_all <- bind_rows(df_pred, df_true) |>
       levels = c(
         "True",
         "gaussian process",
-        "bayesian ridge",
+        "bym2",
         "mlp",
         "xg-boost"
       ),
       labels = c(
         "True",
         "GP",
-        "Bayesian Ridge",
+        "BYM2",
         "MLP",
         "XGBoost"
       )
@@ -203,7 +212,7 @@ lab_hide_pad <- function(x) ifelse(str_detect(x, "__pad"), "", x)
 
 model_cols <- c(
   "GP" = "#1B7837",
-  "Bayesian Ridge" = "#D73027",
+  "BYM2" = "#D73027",
   "MLP" = "#2C7FB8",
   "XGBoost" = "#8E63CE"
 )
@@ -238,7 +247,7 @@ gg <- ggplot(df_all, aes(x = Datetime, y = poor_fcs, color = model, linetype = m
     values = c(
       "True" = "dotted",
       "GP" = "solid",
-      "Bayesian Ridge" = "solid",
+      "BYM2" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
     )
@@ -274,21 +283,21 @@ ggsave(
 alpha <- 0.05
 
 # Calculate prediction errors and interval metrics
-df_pred_metrics <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
+df_pred_metrics <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   mutate(
     model = factor(
       model,
       levels = c(
         "True",
         "gaussian process",
-        "bayesian ridge",
+        "bym2",
         "mlp",
         "xg-boost"
       ),
       labels = c(
         "True",
         "GP",
-        "Bayesian Ridge",
+        "BYM2",
         "MLP",
         "XGBoost"
       )
@@ -464,7 +473,7 @@ ggsave(
 # ============================================================================
 
 # Load GP predictions WITHOUT features
-path_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20251210_112502")
+path_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20261026_174120")
 
 df_gp_no_features <- map_dfr(0:5, function(i) {
   path_i <- file.path(path_gp_no_features, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))

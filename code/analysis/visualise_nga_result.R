@@ -3,7 +3,7 @@
 # ============================================================================
 # This script compares 4 different models for predicting food insecurity:
 # 1. Gaussian Process (GP)
-# 2. Bayesian Ridge Regression
+# 2. BYM2
 # 3. Multi-Layer Perceptron (MLP)
 # 4. XGBoost
 #
@@ -30,7 +30,7 @@ path_nga <- c(
     "output", "gaussian_process",
     "NGA_gp_with_features_normal_centered_20260217_155435"
   ),
-  file.path("output", "data", "nga_bayesian_ridge"),
+  file.path("output", "bym2", "NGA_bym2_with_features_ridge_20261028_122002"),
   file.path("output", "data", "nga_mlp"),
   file.path("output", "data", "nga_xg_boost")
 )
@@ -40,14 +40,23 @@ path_nga <- c(
 # STEP 1: Load predictions from all models (5-fold cross-validation)
 # ============================================================================
 
-# ---- Bayesian Ridge ----
-# Load Bayesian Ridge predictions for each CV fold
+# ---- BYM2 ----
+# Load BYM2 predictions for each CV fold (read directly from the MCMC diagnostics,
+# same layout as the GP output)
 path <- path_nga[[2]]
-df_bayesian_ridge <- map_dfr(1:5, function(i) {
-  read_csv(file.path(path, sprintf("nga_predictions_fold%d.csv", i)), show_col_types = FALSE) %>%
+df_bym2 <- map_dfr(1:5, function(i) {
+  path_i <- file.path(path, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
+
+  read_csv(path_i, show_col_types = FALSE) %>%
+    rename(
+      y_hat   = y_pred_mean,
+      ci_low  = `y_pred_ci_2.5`,
+      ci_high = `y_pred_ci_97.5`
+    ) %>%
+    select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
     mutate(
       cv_ind = i,
-      model  = "bayesian ridge"
+      model  = "bym2"
     )
 })
 
@@ -128,7 +137,7 @@ df_true <- df_gp |>
   )
 
 # Combine all model predictions with harmonized column names
-df_pred <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
+df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   transmute(
     Datetime,
     adm1_name,
@@ -148,14 +157,14 @@ df_all <- bind_rows(df_pred, df_true) |>
       levels = c(
         "True",
         "gaussian process",
-        "bayesian ridge",
+        "bym2",
         "mlp",
         "xg-boost"
       ),
       labels = c(
         "True",
         "GP with covariates",
-        "Bayesian Ridge",
+        "BYM2",
         "MLP",
         "XGBoost"
       )
@@ -165,7 +174,7 @@ df_all <- bind_rows(df_pred, df_true) |>
 # Define color scheme for each model
 model_cols <- c(
   "GP with covariates" = "#1B7837",
-  "Bayesian Ridge" = "#D73027",
+  "BYM2" = "#D73027",
   "MLP" = "#2C7FB8",
   "XGBoost" = "#8E63CE"
 )
@@ -211,7 +220,7 @@ gg <- ggplot(df_all, aes(
     values = c(
       "True" = "dotted",
       "GP with covariates" = "solid",
-      "Bayesian Ridge" = "solid",
+      "BYM2" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
     )
@@ -247,21 +256,21 @@ ggsave(
 alpha <- 0.05
 
 # Calculate prediction errors and interval metrics
-df_pred_metrics <- bind_rows(df_gp, df_bayesian_ridge, df_mlp, df_xg_boost) |>
+df_pred_metrics <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   mutate(
     model = factor(
       model,
       levels = c(
         "True",
         "gaussian process",
-        "bayesian ridge",
+        "bym2",
         "mlp",
         "xg-boost"
       ),
       labels = c(
         "True",
         "GP with covariates",
-        "Bayesian Ridge",
+        "BYM2",
         "MLP",
         "XGBoost"
       )
