@@ -9,10 +9,10 @@
 #   - Interval score: IS_alpha at alpha = 0.05 (95% interval)
 #
 # Per-model draws (added alongside the existing point/interval predictions):
-#   - GP:             ppc_samples_cv*.csv (joined to ppc_summary_cv*.csv)
-#   - Bayesian Ridge:  *_mc_samples_fold*.csv (joined to *_predictions_fold*.csv)
-#   - MLP:             mc_samples_cv*.csv (joined to predictions_cv*.csv)
-#   - XGBoost:         bootstrap_preds_cv*.csv (joined to predictions_cv*.csv)
+#   - GP:    ppc_samples_cv*.csv (joined to ppc_summary_cv*.csv)
+#   - BYM2:  ppc_samples_cv*.csv (joined to ppc_summary_cv*.csv)
+#   - MLP:   mc_samples_cv*.csv (joined to predictions_cv*.csv)
+#   - XGBoost: bootstrap_preds_cv*.csv (joined to predictions_cv*.csv)
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -65,25 +65,26 @@ metrics_gp <- function(run_dir) {
   })
 }
 
-metrics_bayesian_ridge <- function(data_dir, prefix) {
-  sample_files <- list.files(data_dir, pattern = paste0("^", prefix, "_mc_samples_fold\\d+\\.csv$"), full.names = TRUE)
+metrics_bym <- function(run_dir) {
+  diag_dir <- file.path(run_dir, "prior_posterior_diagnostics")
+  sample_files <- list.files(diag_dir, pattern = "^ppc_samples_cv\\d+\\.csv$", full.names = TRUE)
 
   map_dfr(sample_files, function(f) {
-    fold <- as.integer(gsub("\\D", "", basename(f)))
-    if (fold == 0) return(NULL) # fold 0 is never a held-out test fold
+    cv_fold <- as.integer(gsub("\\D", "", basename(f)))
+    if (cv_fold == 0) return(NULL) # fold 0 is never a held-out test fold
 
     samples <- read_csv(f, show_col_types = FALSE)
-    preds <- read_csv(file.path(data_dir, paste0(prefix, "_predictions_fold", fold, ".csv")), show_col_types = FALSE)
+    summary <- read_csv(file.path(diag_dir, paste0("ppc_summary_cv", cv_fold, ".csv")), show_col_types = FALSE)
 
     sample_cols <- grep("^sample_", names(samples), value = TRUE)
     draws <- as.matrix(samples[, sample_cols])
 
     tibble(
-      y_true = preds$y_true,
-      y_hat = preds$y_hat,
-      ci_low = preds$ci_low,
-      ci_high = preds$ci_high,
-      crps = crps_from_draws(samples$y_true, draws)
+      y_true = summary$y_true,
+      y_hat = summary$y_pred_mean,
+      ci_low = summary$y_pred_ci_2.5,
+      ci_high = summary$y_pred_ci_97.5,
+      crps = crps_from_draws(summary$y_true, draws)
     )
   })
 }
@@ -188,13 +189,13 @@ write_metrics_table <- function(df, caption, label, out_path) {
 # Run for one country
 # ============================================================================
 run_country <- function(country_label, gp_with_features_dir, gp_no_features_dir,
-                         br_dir, br_prefix, mlp_dir, xgb_dir, caption, label, out_path) {
+                         bym_dir, mlp_dir, xgb_dir, caption, label, out_path) {
   cat("\n==", country_label, "==\n")
 
   results <- bind_rows(
     summarise_model(metrics_gp(gp_with_features_dir), "GP With Features"),
     summarise_model(metrics_gp(gp_no_features_dir), "GP No Features"),
-    summarise_model(metrics_bayesian_ridge(br_dir, br_prefix), "Bayesian Ridge"),
+    summarise_model(metrics_bym(bym_dir), "BYM2"),
     summarise_model(metrics_mlp(mlp_dir), "MLP"),
     summarise_model(metrics_xgboost(xgb_dir), "XG-Boost")
   )
@@ -213,8 +214,7 @@ tcd_metrics <- run_country(
   country_label = "Chad",
   gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_with_features_ridge_centered_20261026_132935"),
   gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20261026_174120"),
-  br_dir = file.path(topdir, "output", "data", "tcd_bayesian_ridge"),
-  br_prefix = "tcd",
+  bym_dir = file.path(topdir, "output", "bym2", "TCD_bym2_with_features_ridge_20261029_094441"),
   mlp_dir = file.path(topdir, "output", "data", "tcd_mlp"),
   xgb_dir = file.path(topdir, "output", "data", "tcd_xg_boost"),
   caption = "Metrics for Chad models",
@@ -226,8 +226,7 @@ nga_metrics <- run_country(
   country_label = "Nigeria",
   gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_with_features_normal_centered_20260217_155435"),
   gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_no_features_20251020_161159"),
-  br_dir = file.path(topdir, "output", "data", "nga_bayesian_ridge"),
-  br_prefix = "nga",
+  bym_dir = file.path(topdir, "output", "bym2", "NGA_bym2_with_features_ridge_20261028_122002"),
   mlp_dir = file.path(topdir, "output", "data", "nga_mlp"),
   xgb_dir = file.path(topdir, "output", "data", "nga_xg_boost"),
   caption = "Metrics for Nigeria models",
