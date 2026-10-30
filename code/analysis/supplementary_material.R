@@ -240,6 +240,8 @@ ggsave(
 conv_path_nigeria <- file.path(path_nigeria, "convergence_diagnostics")
 conv_path_chad <- file.path(path_chad, "convergence_diagnostics")
 
+hyper_files_nigeria <- file.path(conv_path_nigeria, sprintf("trace_plot_cv%d.png", 1:5))
+hyper_files_chad    <- file.path(conv_path_chad, sprintf("trace_plot_cv%d.png", 1:5))
 
 # ============================================================================
 # Figure 1: trace_plot_cv*.png  (GP hyperparameters chains)
@@ -298,7 +300,7 @@ rho_res_path_nigeria <- file.path(
 
 rho_res_path_chad <- file.path(
   "output", "gaussian_process",
-  "TCD_gp_with_features_normal_20251219_182307","final_cv_summary.csv"
+  "TCD_gp_with_features_ridge_centered_20261026_181018","final_cv_summary.csv"
 )
 
 
@@ -379,14 +381,9 @@ rho_rhat
 # ============================================================================
 # Fold 0 is excluded (always in train, never a held-out test fold for
 # either country) and reported as "--".
-res_cv_wide <- bind_rows(
-  rhat |> rename(value_rhat = max_rhat),
-  tibble(country = unique(rhat$country), cv_fold = 0, value_rhat = NA_real_)
-) |>
-  left_join(
-    bind_rows(ess, tibble(country = unique(ess$country), cv_fold = 0, min_ess_bulk = NA_real_)),
-    by = c("country", "cv_fold")
-  ) |>
+res_cv_wide <- rhat |>
+  rename(value_rhat = max_rhat) |>
+  left_join(ess, by = c("country", "cv_fold")) |>
   pivot_wider(
     id_cols = cv_fold,
     names_from = country,
