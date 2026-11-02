@@ -26,7 +26,7 @@ path_nigeria <- file.path(
 
 path_chad <- file.path(
   "output", "gaussian_process",
-  "TCD_gp_with_features_ridge_centered_20261026_132935"
+  "TCD_gp_with_features_ridge_centered_20261102_182146"
 )
 
 # Feature name mapping for Nigeria

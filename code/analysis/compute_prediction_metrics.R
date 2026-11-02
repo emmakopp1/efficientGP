@@ -232,9 +232,9 @@ run_country <- function(country_label, gp_with_features_dir, gp_no_features_dir,
 
 tcd_metrics <- run_country(
   country_label = "Chad",
-  gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_with_features_ridge_centered_20261026_132935"),
-  gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20261026_174120"),
-  bym_dir = file.path(topdir, "output", "bym2", "TCD_bym2_with_features_ridge_20261029_094441"),
+  gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_with_features_ridge_centered_20261102_182146"),
+  gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20261102_192104"),
+  bym_dir = file.path(topdir, "output", "bym2", "TCD_bym2_with_features_ridge_20261102_190317"),
   mlp_dir = file.path(topdir, "output", "data", "tcd_mlp"),
   xgb_dir = file.path(topdir, "output", "data", "tcd_xg_boost"),
   caption = "Metrics for Chad models",

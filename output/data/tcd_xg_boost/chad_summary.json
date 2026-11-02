@@ -1,25 +1,25 @@
 {
   "country": "chad",
-  "mean_test_rmse": 0.06599850413342012,
-  "std_test_rmse": 0.03173808986414657,
+  "mean_test_rmse": 0.06692997618999692,
+  "std_test_rmse": 0.029386552327315487,
   "cv_folds": [
     {
       "cv_fold": 0,
-      "test_rmse": 0.1323885238404026,
+      "test_rmse": 0.1309715765432375,
       "best_params": {
         "learning_rate": 0.05,
         "max_depth": 3,
         "n_estimators": 100,
-        "subsample": 1.0
+        "subsample": 0.8
       }
     },
     {
       "cv_fold": 1,
-      "test_rmse": 0.07398808082205774,
+      "test_rmse": 0.056668231249463005,
       "best_params": {
         "learning_rate": 0.05,
         "max_depth": 3,
-        "n_estimators": 100,
+        "n_estimators": 200,
         "subsample": 0.8
       }
     },
@@ -35,32 +35,32 @@
     },
     {
       "cv_fold": 3,
-      "test_rmse": 0.04317201913634762,
+      "test_rmse": 0.04370381460156443,
       "best_params": {
         "learning_rate": 0.1,
         "max_depth": 3,
-        "n_estimators": 200,
+        "n_estimators": 100,
         "subsample": 0.8
       }
     },
     {
       "cv_fold": 4,
-      "test_rmse": 0.04072940376519113,
+      "test_rmse": 0.06349039186853513,
       "best_params": {
-        "learning_rate": 0.1,
+        "learning_rate": 0.05,
         "max_depth": 3,
-        "n_estimators": 200,
-        "subsample": 1.0
+        "n_estimators": 100,
+        "subsample": 0.8
       }
     },
     {
       "cv_fold": 5,
-      "test_rmse": 0.0470526391985059,
+      "test_rmse": 0.04808548483916573,
       "best_params": {
-        "learning_rate": 0.05,
+        "learning_rate": 0.1,
         "max_depth": 3,
-        "n_estimators": 200,
-        "subsample": 1.0
+        "n_estimators": 100,
+        "subsample": 0.8
       }
     }
   ]

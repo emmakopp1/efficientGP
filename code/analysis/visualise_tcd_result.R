@@ -24,9 +24,9 @@ library(sf)
 path_tcd <- c(
   file.path(
     "output", "gaussian_process",
-    "TCD_gp_with_features_ridge_centered_20261026_132935"
+    "TCD_gp_with_features_ridge_centered_20261102_182146"
   ),
-  file.path("output", "bym2", "TCD_bym2_with_features_ridge_20261029_094441"),
+  file.path("output", "bym2", "TCD_bym2_with_features_ridge_20261102_190317"),
   file.path("output", "data", "tcd_mlp"),
   file.path("output","data","tcd_xg_boost")
 )
@@ -483,7 +483,7 @@ ggsave(
 # ============================================================================
 
 # Load GP predictions WITHOUT features
-path_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20261026_174120")
+path_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20261102_192104")
 
 df_gp_no_features <- map_dfr(0:5, function(i) {
   path_i <- file.path(path_gp_no_features, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
