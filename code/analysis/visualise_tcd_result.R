@@ -783,3 +783,95 @@ summary_tcd <- df_weekly_tcd |>
 
 cat("STEP 8d: FCS prevalence summary per region (sorted by variability)\n")
 print(summary_tcd, n = Inf)
+
+# ============================================================================
+# STEP 9: Map of Chad cross-validation region split (N/S/E/W/fixed)
+# ============================================================================
+# Mirrors NGA_region_split_map.png (STEP 9 in visualise_nga_result.R), using
+# the same quadrant classification and fold-0 regions as
+# chad_fold_reassignment.R (capital + Logone Oriental = "fixed"; Batha
+# reclassified from North to South).
+
+df_region_split_tcd <- df_geo_tcd |>
+  mutate(
+    quadrant = if_else(adm1_name == "Batha", "South", quadrant),
+    quadrant = if_else(adm1_name == "Logone Oriental", "Fixed", quadrant),
+    quadrant = case_when(
+      adm1_name == "Batha" ~ "East",
+      adm1_name == "Guera" ~ "South",
+      TRUE ~ quadrant
+    )
+  ) |>
+  bind_rows(tibble(adm1_name = capital_tcd, quadrant = "Fixed")) |>
+  select(adm1_name, quadrant)
+
+# Tibesti is excluded from chad-weekly-with-features.csv (not covered by the
+# model), but is re-added here as "Not covered" so the map shows the full
+# national boundary, mirroring the "Not covered" states on the Nigeria map.
+gdf_tcd_with_tibesti <- st_read(file.path("data", "chad_geospatial", "tcd_admin1.shp"), quiet = TRUE) |>
+  mutate(adm1_name = str_to_title(adm1_name)) |>
+  mutate(adm1_name = recode(adm1_name, !!!shp_name_fix_tcd)) |>
+  select(adm1_name, geometry)
+
+df_region_split_tcd <- df_region_split_tcd |>
+  bind_rows(tibble(adm1_name = "Tibesti", quadrant = "Not covered")) |>
+  mutate(
+    quadrant = factor(
+      quadrant,
+      levels = c("Fixed", "North", "South", "East", "West", "Not covered")
+    )
+  )
+
+tcd_region_split <- gdf_tcd_with_tibesti |>
+  left_join(df_region_split_tcd, by = "adm1_name")
+
+region_split_cols_tcd <- c(
+  setNames(
+    RColorBrewer::brewer.pal(6, "Blues")[2:6],
+    c("Fixed", "North", "South", "East", "West")
+  ),
+  "Not covered" = "grey90"
+)
+
+p_tcd_region_split <- ggplot(tcd_region_split) +
+  ggpattern::geom_sf_pattern(
+    aes(
+      fill = quadrant,
+      pattern = quadrant == "Not covered"
+    ),
+    color = "gray30",
+    linewidth = 0.2,
+    pattern_spacing = 0.08,
+    pattern_units = "cm",
+    pattern_angle = 45,
+    pattern_fill = "gray50",
+    pattern_colour = "gray50"
+  ) +
+  scale_fill_manual(values = region_split_cols_tcd, name = "Region split") +
+  ggpattern::scale_pattern_manual(
+    values = c(`TRUE` = "stripe", `FALSE` = "none"),
+    guide = "none"
+  ) +
+  guides(
+    fill = guide_legend(
+      override.aes = list(
+        pattern = c("none", "none", "none", "none", "none", "stripe"),
+        pattern_spacing = 0.08,
+        pattern_units = "cm",
+        pattern_fill = "gray50",
+        pattern_colour = "gray50"
+      )
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+p_tcd_region_split
+
+ggsave(
+  filename = file.path("output", "figure", "TCD_region_split_map.png"),
+  plot = p_tcd_region_split, width = 6, height = 4.5, units = "in", dpi = 300, bg = "white"
+)

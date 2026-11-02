@@ -23,6 +23,7 @@ library(ggrepel)
 library(wesanderson)
 library(here)
 library(forcats)
+library(viridisLite)
 
 # Define paths to model output directories
 path_nga <- c(
@@ -851,6 +852,84 @@ ggsave(
   plot = p, width = 5, height = 3, units = "in", dpi = 300, bg ="white"
 )
 
+
+# ============================================================================
+# STEP 9: Map of Nigeria cross-validation region split (nc/ne/nw/s/fixed)
+# ============================================================================
+
+df_region_split <- read_csv(file_name, show_col_types = FALSE) |>
+  select(adm1_name, region_cat) |>
+  distinct() |>
+  mutate(
+    region_cat = case_when(
+      region_cat == "nc" ~ "North central",
+      region_cat == "ne" ~ "North east",
+      region_cat == "nw" ~ "North west",
+      region_cat == "s"  ~ "South",
+      region_cat == "fixed" ~ "Fixed",
+      is.na(region_cat) ~ "Not covered"
+    ),
+    region_cat = factor(
+      region_cat,
+      levels = c("Fixed", "North central", "North east", "North west", "South", "Not covered")
+    )
+  )
+
+nigeria_region_split <- nigeria_1 |>
+  select(adm1_name, geometry) |>
+  left_join(df_region_split, by = "adm1_name") |>
+  mutate(region_cat = fct_na_value_to_level(region_cat, "Not covered"))
+
+region_split_cols <- c(
+  setNames(
+    RColorBrewer::brewer.pal(6, "Blues")[2:6],
+    c("Fixed", "North central", "North east", "North west", "South")
+  ),
+  "Not covered" = "grey90"
+)
+
+p <- ggplot(nigeria_region_split) +
+  ggpattern::geom_sf_pattern(
+    aes(
+      fill = region_cat,
+      pattern = region_cat == "Not covered"
+    ),
+    color = "gray30",
+    linewidth = 0.2,
+    pattern_spacing = 0.08,
+    pattern_units = "cm",
+    pattern_angle = 45,
+    pattern_fill = "gray50",
+    pattern_colour = "gray50"
+  ) +
+  scale_fill_manual(values = region_split_cols, name = "Region split") +
+  ggpattern::scale_pattern_manual(
+    values = c(`TRUE` = "stripe", `FALSE` = "none"),
+    guide = "none"
+  ) +
+  guides(
+    fill = guide_legend(
+      override.aes = list(
+        pattern = c("none", "none", "none", "none", "none", "stripe"),
+        pattern_spacing = 0.08,
+        pattern_units = "cm",
+        pattern_fill = "gray50",
+        pattern_colour = "gray50"
+      )
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+p
+
+ggsave(
+  filename = file.path("output", "figure", "NGA_region_split_map.png"),
+  plot = p, width = 6, height = 4.5, units = "in", dpi = 300, bg = "white"
+)
 
 ### Regression coefficients
 df_coef <- read_csv(file = file.path("output","gaussian_process",
