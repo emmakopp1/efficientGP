@@ -4,7 +4,7 @@ This repository contains the code and data accompanying the paper:
 
 > **Filling survey gaps in food security monitoring with spatio-temporal additive Gaussian process models**
 
-by E. Kopp, S. Ishida, R. Leygonie, F. Panero (2026). We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against Bayesian Ridge regression, Multi-Layer Perceptron (MLP), and XGBoost.
+by E. Kopp, S. Ishida, R. Leygonie, F. Panero (2026). We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against a Bayesian Ridge with BYM2 spatial effect (BYM2), a Multi-Layer Perceptron (MLP), and XGBoost.
 
 ---
 
@@ -25,46 +25,59 @@ efficientGP/
 ├── code/
 │   ├── models/
 │   │   ├── gaussian_process/
-│   │   │   ├── gp_runner_lib.R                          # Core GP framework: data loading, CV, MCMC, diagnostics
-│   │   │   ├── gp_runner_nested_cross_validation.R      # Nested CV for rho1 hyperparameter tuning
-│   │   │   ├── NGA_gp_rho1_cross_validation.R           # Nigeria: spatial range rho1 cross-validation
-│   │   │   ├── NGA_gp_no_features_rho1fixed.R           # Nigeria: GP without covariates
-│   │   │   ├── NGA_gp_with_feature_rho1fixed_normal_prior.R  # Nigeria: GP with covariates, normal prior
-│   │   │   ├── NGA_gp_with_feature_rho1fixed_ridge_prior.R   # Nigeria: GP with covariates, ridge prior
-│   │   │   ├── TCD_gp_rho1_cross_validation.R           # Chad: spatial range rho1 cross-validation
-│   │   │   ├── TCD_gp_no_features_rho1fixed.R           # Chad: GP without covariates
-│   │   │   ├── TCD_gp_with_features_rho1fixed_normal_prior.R # Chad: GP with covariates, normal prior
-│   │   │   └── TCD_gp_with_features_rho1fixed_ridge_prior.R  # Chad: GP with covariates, ridge prior
+│   │   │   ├── gp_runner_lib.R                                  # Core GP framework: data loading, CV, MCMC, diagnostics
+│   │   │   ├── gp_runner_nested_cross_validation.R              # Nested CV for rho1 hyperparameter tuning
+│   │   │   ├── NGA_gp_runner_lib_prediction.R                   # Single-fit GP runner: train on all surveyed regions, predict on unsurveyed ones
+│   │   │   ├── NGA_gp_rho1_cross_validation.R                   # Nigeria: spatial range rho1 cross-validation
+│   │   │   ├── NGA_gp_no_features_rho1fixed.R                   # Nigeria: GP without covariates
+│   │   │   ├── NGA_gp_with_feature_rho1fixed_normal_prior.R     # Nigeria: GP with covariates, normal prior (paper's main model)
+│   │   │   ├── NGA_gp_with_feature_rho1fixed_ridge_prior.R      # Nigeria: GP with covariates, ridge prior
+│   │   │   ├── NGA_gp_with_feature_normal_prior_prediction.R    # Nigeria: real-world prediction for states not covered by the survey
+│   │   │   ├── NGA_gp_with_feature_rho1fixed_normal_prior_sensititvity_analysis.R # Nigeria: sensitivity analysis (90-day overlapping observations)
+│   │   │   ├── TCD_gp_rho1_cross_validation.R                   # Chad: spatial range rho1 cross-validation
+│   │   │   ├── TCD_gp_no_features_rho1fixed.R                   # Chad: GP without covariates
+│   │   │   ├── TCD_gp_with_features_rho1fixed_normal_prior.R    # Chad: GP with covariates, normal prior
+│   │   │   ├── TCD_gp_with_features_rho1fixed_ridge_prior.R     # Chad: GP with covariates, ridge prior (paper's main model)
+│   │   │   └── TCD_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R # Chad: sensitivity analysis (90-day overlapping observations)
+│   │   ├── bym/
+│   │   │   ├── bym_runner_lib.R           # Core BYM2 framework: data loading, CV, MCMC, diagnostics
+│   │   │   ├── build_adjacency.py         # Builds the admin1 adjacency graphs (ICAR structure) for Nigeria and Chad
+│   │   │   ├── NGA_bym2_ridge_prior.R     # Nigeria: Bayesian Ridge with BYM2 spatial effect + RW1 temporal effect
+│   │   │   └── TCD_bym2_ridge_prior.R     # Chad: Bayesian Ridge with BYM2 spatial effect + RW1 temporal effect
 │   │   ├── stan/
-│   │   │   ├── GP_helper.stan                           # Shared kernel functions (OU, fBM, spectral decomp.)
-│   │   │   ├── GPst_rho1fixed.stan                      # Intercept-only spatio-temporal GP
-│   │   │   ├── GPstCOV_rho1fixed_normal_prior.stan      # GP with covariates, normal prior
-│   │   │   └── GPstCOV_rho1fixed_ridge_centered_prior.stan   # GP with covariates, ridge-centered prior
+│   │   │   ├── GP_helper.stan                                 # Shared kernel functions (OU, fBM, spectral decomp.)
+│   │   │   ├── GPst_rho1fixed.stan                             # Intercept-only spatio-temporal GP
+│   │   │   ├── GPstCOV_rho1fixed_normal_prior.stan             # GP with covariates, normal prior
+│   │   │   ├── GPstCOV_rho1fixed_ridge_centered_prior.stan     # GP with covariates, ridge-centered prior
+│   │   │   ├── BYM2_ridge_prior.stan                           # BYM2 spatial effect + RW1 temporal effect, ridge prior on covariates
+│   │   │   ├── NGA_GPstCOV_rho1fixed_normal_prior_sensitive_analysis.stan # Nigeria sensitivity-analysis variant
+│   │   │   └── TCD_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan  # Chad sensitivity-analysis variant
 │   │   ├── utils/
 │   │   │   ├── data_prep.R        # Feature engineering and standardisation (train-set statistics only)
 │   │   │   ├── convergence.R      # Rhat / ESS convergence diagnostics
 │   │   │   ├── diagnostic.R       # Posterior predictive checks and coefficient visualisation
 │   │   │   ├── model_utils.py     # Python helpers (logit / inverse-logit transforms)
 │   │   │   └── mlp_utils.py       # PyTorch Dataset, MLP architecture, training loop, MC Dropout
-│   │   ├── bayesian_ridge.py      # Bayesian Ridge regression benchmark
 │   │   ├── mlp.py                 # MLP with MC Dropout benchmark
 │   │   ├── xg-boost.py            # XGBoost with bootstrap confidence intervals benchmark
 │   │   ├── NGA_shap_analysis.py   # SHAP feature importance — Nigeria
 │   │   └── TCD_shap_analysis.py   # SHAP feature importance — Chad
 │   └── analysis/
-│       ├── visualise_nga_result.R      # Comparison plots for Nigeria
-│       ├── visualise_tcd_result.R      # Comparison plots for Chad
-│       ├── supplementary_material.R    # Figures for the supplementary material
-│       ├── metrics.py                  # Quantitative metrics table (RMSE, MAE, coverage)
-│       └── coverage_multi_quantile.R   # Coverage at 50/75/90/95% from GP posterior draws
+│       ├── visualise_nga_result.R          # Comparison plots for Nigeria, incl. real-world unsurveyed-region map
+│       ├── visualise_tcd_result.R          # Comparison plots for Chad
+│       ├── supplementary_material.R        # Figures for the supplementary material
+│       ├── compute_prediction_metrics.R    # Quantitative metrics tables (RMSE, MAE, Coverage, MIL, Interval Score, CRPS)
+│       └── chad_fold_reassignment.R        # Chad: reassigns Batha/Guera between CV geographic folds
 ├── data/
 │   ├── new/
 │   │   ├── nigeria/               # Weekly time series with features + static region data
 │   │   └── chad/                  # Weekly time series with features + static region data
-│   └── nigeria_geospatial/        # Shapefiles for administrative boundaries (Nigeria)
+│   ├── nigeria_geospatial/        # Shapefiles for administrative boundaries (Nigeria)
+│   └── chad_geospatial/           # Shapefiles for administrative boundaries (Chad)
 └── output/
     ├── gaussian_process/          # Per-run timestamped GP outputs (see structure below)
-    ├── data/                      # Benchmark model predictions (one CSV per CV fold)
+    ├── bym2/                      # Per-run timestamped BYM2 outputs (same structure as the GP outputs)
+    ├── data/                      # MLP / XGBoost predictions (one CSV per CV fold)
     ├── figure/                    # Figures for the paper
     └── tables/                    # LaTeX metric tables
 ```
@@ -96,12 +109,11 @@ MCMC estimation is performed via [CmdStanR](https://mc-stan.org/cmdstanr/) (4 ch
 
 | Model | Implementation | Uncertainty estimation |
 |---|---|---|
-| Bayesian Ridge | scikit-learn `BayesianRidge` | Posterior predictive variance |
+| Bayesian Ridge with BYM2 + RW1 | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, RW1 temporal effect, ridge prior on covariates | Posterior predictive distribution |
 | MLP | PyTorch — 3 hidden layers, MC Dropout | Monte Carlo Dropout samples |
 | XGBoost | xgboost + scikit-learn `GridSearchCV` | Bootstrap confidence intervals |
-| BYM2 | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, RW1 + iid temporal effects, ridge prior on covariates | Posterior predictive distribution |
 
-All benchmarks share the same leave-one-region-out CV folds and the same standardised feature matrices produced by the GP pipeline.
+All benchmarks share the same leave-one-region-out CV folds. BYM2 reuses the same engineered covariates and train-set standardisation as the GP; MLP and XGBoost consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline and apply their own scaling.
 
 ---
 
@@ -133,7 +145,7 @@ pip install torch xgboost scikit-learn pandas numpy shap
 
 ## Reproducing the results
 
-The pipeline runs in four sequential steps.
+The pipeline runs in five sequential steps.
 
 ### Step 1 — Cross-validate the spatial range $\rho_1$
 
@@ -183,7 +195,7 @@ output/gaussian_process/NGA_gp_with_features_normal_centered_YYYYMMDD_HHMMSS/
 └── final_cv_summary.csv               # Aggregate rMSE, MAE, coverage
 ```
 
-> **Note:** The output directories referenced in `code/analysis/metrics.py`, `visualise_*_result.R`, and `supplementary_material.R` correspond to specific runs used for the paper. Update these paths if you re-run the models.
+> **Note:** The output directories referenced in `code/analysis/compute_prediction_metrics.R`, `visualise_*_result.R`, and `supplementary_material.R` correspond to specific runs used for the paper. Update these paths if you re-run the models.
 
 ### Step 3 — Fit the benchmark models
 
@@ -198,7 +210,7 @@ python code/models/mlp.py \
 
 python code/models/mlp.py \
     --country chad \
-    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735 \
+    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20261102_182146 \
     --output-data output/data/tcd_mlp
 
 # XGBoost
@@ -209,11 +221,8 @@ python code/models/xg-boost.py \
 
 python code/models/xg-boost.py \
     --country chad \
-    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20251216_114735 \
+    --project-path output/gaussian_process/TCD_gp_with_features_ridge_centered_20261102_182146 \
     --output-data output/data/tcd_xg_boost
-
-# Bayesian Ridge (paths are set inside the script)
-python code/models/bayesian_ridge.py
 ```
 
 ### Step 3b — Fit the BYM2 benchmark
@@ -230,11 +239,8 @@ nohup Rscript code/models/bym/TCD_bym2_ridge_prior.R > output/logs/tcd_bym2.log 
 ### Step 4 — Analysis and figures
 
 ```bash
-# Metrics table (RMSE, MAE, Coverage 95%)
-python code/analysis/metrics.py
-
-# Coverage at 50 / 75 / 90 / 95% (GP models only, from posterior draws)
-Rscript code/analysis/coverage_multi_quantile.R
+# Metrics tables (RMSE, MAE, Coverage 95%, MIL, Interval Score, CRPS)
+Rscript code/analysis/compute_prediction_metrics.R
 
 # Comparison figures
 Rscript code/analysis/visualise_nga_result.R
