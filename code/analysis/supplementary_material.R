@@ -40,7 +40,7 @@ feature_map_nga <- c(
   log_currency_exchange                = "log (Currency exchange rate)",
   log_food_inflation                   = "log(Food inflation rate)",
   log_food_inflation_MPI               = "log(Food inflation rate) X MPI",
-  headline_inflation_cubic_intp        = "log(Headline inflation)",
+  headline_inflation_cubic_intp        = "Headline inflation",
 
   # demographic / static
   MPI                                  = "MPI",
@@ -72,7 +72,7 @@ feature_map_chad <- c(
 desired_order_nga <- c(
   "Rainfall anomaly", "NDVI", "NDVI anomaly",
   "log (Currency exchange rate)",
-  "log(Headline inflation)",
+  "Headline inflation",
   "log(Food inflation rate)", "log(Food inflation rate) X MPI",
   "MPI", "log (Area size)", "Muslim population percentage",
   "log(Fatalities from explosion)", "log(Fatalities from battles)",
