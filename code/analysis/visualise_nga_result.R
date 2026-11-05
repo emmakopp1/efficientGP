@@ -578,7 +578,7 @@ ggsave(
 # ============================================================================
 
 # Load GP predictions WITH features ridge centered
-path_gp_ridge <- file.path("output", "gaussian_process", "NGA_gp_with_features_normal_centered_20260217_155435")
+path_gp_ridge <- file.path("output", "gaussian_process", "NGA_gp_with_features_normal_centered_20261105_121400_unsurveyed")
 path_i <- file.path(path_gp_ridge, "prior_posterior_diagnostics", "ppc_summary_cv1.csv")
 
 df_gp_ridge <- read_csv(path_i, show_col_types = FALSE) %>%
@@ -588,7 +588,7 @@ df_gp_ridge <- read_csv(path_i, show_col_types = FALSE) %>%
     ci_high = `y_pred_ci_97.5`
   ) %>%
   select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
-  mutate(model = "gp_ridge_centered")
+  mutate(model = "gp_normal_centered")
 
 # Prepare data for visualization (predictions only, no true values)
 df_gp_ridge_plot <- df_gp_ridge %>%
@@ -603,38 +603,16 @@ df_gp_ridge_plot <- df_gp_ridge %>%
   mutate(
     model = factor(
       model,
-      levels = c("gp_ridge_centered"),
-      labels = c("GP Ridge Centered")
+      levels = c("gp_normal_centered"),
+      labels = c("GP Normal Centered")
     )
   )
 
 # Define color for GP ridge centered model
 gp_ridge_color <- "#1B7837"
-lean_start1 <- as.Date("2022-05-01")
-lean_end1   <- as.Date("2022-10-31")
-lean_start2 <- as.Date("2023-05-01")
-lean_end2   <- as.Date("2023-10-31")
 # Create plot by region (predictions only)
 gg_gp_ridge <- ggplot(df_gp_ridge_plot, aes(
   x = Datetime, y = poor_fcs)
-  ) +
-  geom_rect(
-    inherit.aes = FALSE,
-    xmin = lean_start1,
-    xmax = lean_end1,
-    ymin = -Inf,
-    ymax = Inf,
-    fill = "grey70",
-    alpha = 0.01
-  ) +
-  geom_rect(
-    inherit.aes = FALSE,
-    xmin = lean_start2,
-    xmax = lean_end2,
-    ymin = -Inf,
-    ymax = Inf,
-    fill = "grey70",
-    alpha = 0.01
   ) +
   # Add confidence interval ribbons
   geom_ribbon(
@@ -667,7 +645,7 @@ gg_gp_ridge
 
 # Save the GP ridge centered plot
 ggsave(
-  filename = file.path("output", "figure", "NGA_GP_ridge_centered_by_region.png"),
+  filename = file.path("output", "figure", "NGA_GP_normal_unsurveyed_prediction_by_regions.png"),
   plot = gg_gp_ridge, width = 6, height = 2.5, units = "in", dpi = 300, bg ="white"
 )
 
