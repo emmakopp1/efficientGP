@@ -31,7 +31,7 @@ path_nga <- c(
     "output", "gaussian_process",
     "NGA_gp_with_features_normal_centered_20260217_155435"
   ),
-  file.path("output", "bym2", "NGA_bym2_with_features_ridge_20261028_122002"),
+  file.path("output", "bym2", "NGA_bym2_with_features_ridge_20261105_200149"),
   file.path("output", "data", "nga_mlp"),
   file.path("output", "data", "nga_xg_boost")
 )

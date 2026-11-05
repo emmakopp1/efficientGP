@@ -246,7 +246,7 @@ nga_metrics <- run_country(
   country_label = "Nigeria",
   gp_with_features_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_with_features_normal_centered_20260217_155435"),
   gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_no_features_20251020_161159"),
-  bym_dir = file.path(topdir, "output", "bym2", "NGA_bym2_with_features_ridge_20261028_122002"),
+  bym_dir = file.path(topdir, "output", "bym2", "NGA_bym2_with_features_ridge_20261105_200149"),
   mlp_dir = file.path(topdir, "output", "data", "nga_mlp"),
   xgb_dir = file.path(topdir, "output", "data", "nga_xg_boost"),
   caption = "Metrics for Nigeria models",
