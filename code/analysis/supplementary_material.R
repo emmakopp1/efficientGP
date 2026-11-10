@@ -17,6 +17,8 @@ library(magick)
 library(ggplot2)
 library(png)
 library(grid)
+library(cmdstanr)
+library(posterior)
 
 # Define paths to GP model outputs
 path_nigeria <- file.path(
@@ -236,51 +238,99 @@ ggsave(
 # ============================================================================
 # STEP 2: MCMC Convergence Diagnostics - Combined Trace Plot Figures
 # ============================================================================
+# One row per CV fold (CV1-CV5), one column per GP hyperparameter, each
+# column with its own free y-scale, chains overlaid in color.
 
-conv_path_nigeria <- file.path(path_nigeria, "convergence_diagnostics")
-conv_path_chad <- file.path(path_chad, "convergence_diagnostics")
-
-hyper_files_nigeria <- file.path(conv_path_nigeria, sprintf("trace_plot_cv%d.png", 1:5))
-hyper_files_chad    <- file.path(conv_path_chad, sprintf("trace_plot_cv%d.png", 1:5))
-
-# ============================================================================
-# Figure 1: trace_plot_cv*.png  (GP hyperparameters chains)
-# ============================================================================
-
-# Nigeria
-imgs <- image_read(hyper_files_nigeria)
-
-img_width  <- image_info(imgs[1])$width
-img_height <- image_info(imgs[1])$height
-
-row1 <- image_append(imgs[1:2])
-row2 <- image_append(imgs[3:4])
-row3 <- image_append(c(imgs[5], image_blank(img_width, img_height, "white")))
-
-fig_hyper_nigeria <- image_append(c(row1, row2, row3), stack = TRUE)
-
-image_write(
-  fig_hyper_nigeria,
-  path = file.path("output", "figure", "NGA_trace_hyperparamers_cv.png"),
-  format = "png"
+# Stan variable -> display label (plotmath, parsed so e.g. alpha[0] renders
+# as a true Greek alpha with a subscript rather than literal text)
+hyper_param_map <- c(
+  alpha0  = "alpha[0]",
+  alpha1  = "alpha[s]",
+  alpha21 = "alpha[t1]",
+  alpha22 = "alpha[t2]",
+  rho2    = "rho[t]",
+  sigma   = "sigma",
+  sigma1  = "sigma[u]"
+)
+hyper_param_order <- names(hyper_param_map)
+hyper_param_expr <- setNames(
+  map(unname(hyper_param_map), ~ parse(text = .x)[[1]]),
+  hyper_param_map
 )
 
-# Chad
-imgs <- image_read(hyper_files_chad)
+# Build the CV1-CV5 trace-plot grid for one GP run and save it as a PNG
+plot_hyperparam_trace <- function(run_path, folds, out_file) {
+  df_list <- map(folds, function(i) {
+    fit <- readRDS(file.path(run_path, sprintf("fit_cv%d.rds", i)))
+    draws <- fit$draws(variables = hyper_param_order, format = "draws_df")
 
-img_width  <- image_info(imgs[1])$width
-img_height <- image_info(imgs[1])$height
+    draws |>
+      as_tibble() |>
+      select(.chain, .iteration, all_of(hyper_param_order)) |>
+      pivot_longer(
+        cols = all_of(hyper_param_order),
+        names_to = "parameter",
+        values_to = "value"
+      ) |>
+      mutate(
+        cv_fold = sprintf("CV%d", i),
+        parameter = factor(hyper_param_map[parameter], levels = unname(hyper_param_map)),
+        chain = factor(.chain)
+      )
+  })
 
-row1 <- image_append(imgs[1:2])
-row2 <- image_append(imgs[3:4])
-row3 <- image_append(c(imgs[5], image_blank(img_width, img_height, "white")))
+  df_all <- bind_rows(df_list) |>
+    mutate(cv_fold = factor(cv_fold, levels = sprintf("CV%d", folds)))
 
-fig_hyper_chad <- image_append(c(row1, row2, row3), stack = TRUE)
+  # facet_grid can't give independent y-scales per column AND per row at
+  # once, so build one column-plot per parameter (free y-scale across its
+  # CV-fold rows) and assemble the columns side by side with patchwork.
+  # Only the leftmost column keeps the CV-fold row labels; only the
+  # rightmost keeps the legend.
+  param_labels <- hyper_param_map[hyper_param_order]
 
-image_write(
-  fig_hyper_chad,
-  path = file.path("output", "figure", "TCD_trace_hyperparamers_cv.png"),
-  format = "png"
+  col_plots <- map(seq_along(hyper_param_order), function(k) {
+    df_p <- df_all |> filter(parameter == param_labels[k])
+
+    pp <- ggplot(df_p, aes(x = .iteration, y = value, color = chain)) +
+      geom_line(linewidth = 0.2, alpha = 0.8) +
+      facet_grid(rows = vars(cv_fold), scales = "free_y", switch = "y") +
+      labs(x = NULL, y = NULL, color = "chain") +
+      ggtitle(hyper_param_expr[[param_labels[k]]]) +
+      theme_minimal(base_size = 11) +
+      theme(
+        plot.title = element_text(hjust = 0.5, size = 13),
+        panel.grid.minor = element_blank(),
+        strip.placement = "outside"
+      )
+
+    if (k == 1) {
+      pp <- pp + theme(strip.text.y.left = element_text(angle = 0))
+    } else {
+      pp <- pp + theme(strip.text.y.left = element_blank())
+    }
+    pp
+  })
+
+  p <- wrap_plots(col_plots, nrow = 1, guides = "collect") &
+    theme(legend.position = "bottom")
+
+  ggsave(
+    filename = out_file,
+    plot = p, width = 18, height = 8, units = "in", dpi = 300, bg = "white"
+  )
+}
+
+plot_hyperparam_trace(
+  run_path = path_nigeria,
+  folds = 1:5,
+  out_file = file.path("output", "figure", "NGA_trace_hyperparamers_cv.png")
+)
+
+plot_hyperparam_trace(
+  run_path = path_chad,
+  folds = 1:5,
+  out_file = file.path("output", "figure", "TCD_trace_hyperparamers_cv.png")
 )
 
 

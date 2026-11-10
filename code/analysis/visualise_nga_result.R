@@ -928,6 +928,7 @@ feature_map <- c(
   
   # demographic / static
   MPI                                  = "MPI",
+  MPI_intensity                        = "MPI intensity",
   log_Area                             = "log (Area size)",
   Muslim                               = "Muslim population percentage",
   
@@ -946,7 +947,7 @@ desired_order <- c(
   "log (Currency exchange rate)",
   "Headline inflation",
   "log(Food inflation rate)", "log(Food inflation rate) X MPI",
-  "MPI", "log (Area size)", "Muslim population percentage",
+  "MPI", "MPI intensity", "log (Area size)", "Muslim population percentage",
   "log(Fatalities from explosion)", "log(Fatalities from battles)",
   "Number of conflicts (battle)",
   "Day index"
