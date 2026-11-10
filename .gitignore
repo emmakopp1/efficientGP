@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+**/.DS_Store
+*.Rproj
+**/__pycache__/
+data/
+archive/
+code/analysis/compute_interval_scores.R
+output/logs/
+output/responses/
+responses/
+Rplots.pdf
+CLAUDE.md
+output/figure/*_mean_shap_importance.png
