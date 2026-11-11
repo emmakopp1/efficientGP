@@ -188,8 +188,9 @@ no_distribution_cols <- c("CRPS", "Interval Score 95")
 # ============================================================================
 model_label <- c(
   "BYM2" = "Bayesian Ridge with BYM2",
-  "GP No Features" = "GP without covariates",
-  "GP With Features" = "GP with covariates",
+  "GP No Features" = "\\GPst{}",
+  "GP With Features" = "\\GPcov{}",
+  "GP With Features Overlap" = "\\GPcovoc{}",
   "MLP" = "MLP",
   "XG-Boost" = "XGBoost"
 )
@@ -269,7 +270,8 @@ write_combined_metrics_table <- function(nga_df, tcd_df, caption, label, out_pat
 # Run for one country
 # ============================================================================
 run_country <- function(country_label, gp_with_features_dir, gp_no_features_dir,
-                         bym_dir, mlp_dir, xgb_dir, extra_bym_dirs = NULL) {
+                         bym_dir, mlp_dir, xgb_dir, extra_bym_dirs = NULL,
+                         gp_overlap_dir = NULL) {
   cat("\n==", country_label, "==\n")
 
   results <- bind_rows(
@@ -288,6 +290,14 @@ run_country <- function(country_label, gp_with_features_dir, gp_no_features_dir,
     )
   }
 
+  # GP with covariates and a region-specific overlap error term
+  if (!is.null(gp_overlap_dir)) {
+    results <- bind_rows(
+      results,
+      summarise_model(metrics_gp(gp_overlap_dir), "GP With Features Overlap")
+    )
+  }
+
   print(results |> mutate(across(where(is.numeric), ~ round(.x, 3))), n = Inf)
 
   results
@@ -303,7 +313,8 @@ tcd_metrics <- run_country(
   gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_no_prior_20261102_192104"),
   bym_dir = file.path(topdir, "output", "bym2", "TCD_bym2_with_features_ridge_20261106_141613"),
   mlp_dir = file.path(topdir, "output", "data", "tcd_mlp"),
-  xgb_dir = file.path(topdir, "output", "data", "tcd_xg_boost")
+  xgb_dir = file.path(topdir, "output", "data", "tcd_xg_boost"),
+  gp_overlap_dir = file.path(topdir, "output", "gaussian_process", "TCD_gp_with_features_ridge_centered_sensitive_analysis_20261102_185709")
 )
 
 nga_metrics <- run_country(
@@ -312,7 +323,8 @@ nga_metrics <- run_country(
   gp_no_features_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_no_features_20251020_161159"),
   bym_dir = file.path(topdir, "output", "bym2", "NGA_bym2_with_features_ridge_20261106_135255"),
   mlp_dir = file.path(topdir, "output", "data", "nga_mlp"),
-  xgb_dir = file.path(topdir, "output", "data", "nga_xg_boost")
+  xgb_dir = file.path(topdir, "output", "data", "nga_xg_boost"),
+  gp_overlap_dir = file.path(topdir, "output", "gaussian_process", "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_105858")
 )
 
 # Combined Nigeria + Chad table (tab:prediction_metrics)

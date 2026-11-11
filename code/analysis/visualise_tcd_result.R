@@ -145,6 +145,10 @@ df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   )
 
 # Combine true values and predictions, then set factor levels for consistent ordering
+# plotmath expression for the GP model legend label (true exponent rendering,
+# consistent glyph weight, unlike the unicode superscript ˢᵗ)
+gp_st_cov_oc_expr <- expression(GP^{st}*" - cov - oc")
+
 df_all <- bind_rows(df_pred, df_true) |>
   mutate(
     model = factor(
@@ -158,7 +162,7 @@ df_all <- bind_rows(df_pred, df_true) |>
       ),
       labels = c(
         "True",
-        "GP",
+        "gp_st_cov_oc",
         "BYM2",
         "MLP",
         "XGBoost"
@@ -215,10 +219,18 @@ panel_levels_no0 <- panel_levels[!str_detect(panel_levels, "^CV 0:")]
 
 
 model_cols <- c(
-  "GP" = "#1B7837",
+  "gp_st_cov_oc" = "#1B7837",
   "BYM2" = "#D73027",
   "MLP" = "#2C7FB8",
   "XGBoost" = "#8E63CE"
+)
+
+model_legend_labels <- c(
+  "True" = "True",
+  "gp_st_cov_oc" = gp_st_cov_oc_expr,
+  "BYM2" = "BYM2",
+  "MLP" = "MLP",
+  "XGBoost" = "XGBoost"
 )
 
 
@@ -246,19 +258,22 @@ gg <- ggplot(df_all_plot, aes(x = Datetime, y = poor_fcs, color = model, linetyp
     values = c(
       "True" = "black",
       model_cols
-    )
+    ),
+    labels = model_legend_labels
   ) +
   scale_fill_manual(
-    values = model_cols
+    values = model_cols,
+    labels = model_legend_labels
   ) +
   scale_linetype_manual(
     values = c(
       "True" = "dotted",
-      "GP" = "solid",
+      "gp_st_cov_oc" = "solid",
       "BYM2" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
-    )
+    ),
+    labels = model_legend_labels
   ) +
   theme_minimal(base_size = 10) +
   theme(
@@ -476,143 +491,6 @@ gg
 ggsave(
   filename = file.path("output", "figure", "TCD_RMSE_all_colored_by_adm1.png"),
   plot = gg, width = 6, height = 7, units = "in", dpi = 300, bg = "white"
-)
-
-# ============================================================================
-# STEP 7: Compare GP without features vs GP with features
-# ============================================================================
-
-# Load GP predictions WITHOUT features
-path_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20261102_192104")
-
-df_gp_no_features <- map_dfr(0:5, function(i) {
-  path_i <- file.path(path_gp_no_features, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
-
-  read_csv(path_i, show_col_types = FALSE) %>%
-    rename(
-      y_hat   = y_pred_mean,
-      ci_low  = `y_pred_ci_2.5`,
-      ci_high = `y_pred_ci_97.5`
-    ) %>%
-    select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
-    mutate(
-      cv_ind = i,
-      model  = "gp_no_features"
-    )
-})
-
-# Combine the two GP models
-df_gp_comparison <- bind_rows(
-  df_gp %>% mutate(model = "gp_with_features"),
-  df_gp_no_features
-) %>%
-  transmute(
-    Datetime,
-    adm1_name,
-    cv_ind,
-    model,
-    cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name),
-    poor_fcs = y_hat,
-    ci_low,
-    ci_high
-  )
-
-# Add true values
-df_gp_all <- bind_rows(df_gp_comparison, df_true) %>%
-  mutate(
-    model = factor(
-      model,
-      levels = c("True", "gp_with_features", "gp_no_features"),
-      labels = c("True", "GP with features", "GP without features")
-    )
-  )
-
-# Apply same panel levels for consistent layout with padding (fold 0 excluded,
-# as it is never a held-out test fold; see STEP 8)
-df_gp_all <- df_gp_all %>%
-  mutate(cv_ind = as.integer(cv_ind)) %>%
-  filter(cv_ind != 0) %>%
-  mutate(cv_ind_adm1_name = factor(as.character(cv_ind_adm1_name), levels = panel_levels_no0))
-
-# Define colors for GP comparison (same as Nigeria: orange for with, green for without)
-gp_comparison_cols <- c(
-  "GP with features" = "#D95F02",
-  "GP without features" = "#1B7837"
-)
-
-# Create comparison plot
-gg_gp_comparison <- ggplot(df_gp_all, aes(
-  x = Datetime, y = poor_fcs,
-  color = model, linetype = model
-)) +
-  # Add confidence interval ribbons for GP models only
-  geom_ribbon(
-    data = df_gp_all %>% filter(model != "True"),
-    aes(ymin = ci_low, ymax = ci_high, fill = model),
-    alpha = 0.3,
-    color = NA
-  ) +
-  # Draw GP prediction lines
-  geom_line(
-    data = df_gp_all %>% filter(model != "True"),
-    linewidth = 0.6
-  ) +
-  # Draw true values last so they appear on top
-  geom_line(
-    data = df_gp_all %>% filter(model == "True"),
-    linewidth = 0.7
-  ) +
-  # Create facet grid with padding panels (4 columns per row)
-  facet_wrap(
-    ~cv_ind_adm1_name,
-    ncol = 4,
-    drop = FALSE,  # Keep empty panels for alignment
-    labeller = as_labeller(lab_hide_pad)  # Hide padding labels
-  ) +
-  # Format y-axis as percentages
-  scale_y_continuous(
-    labels = scales::percent_format(accuracy = 1)
-  ) +
-  # Set colors for each model
-  scale_color_manual(
-    values = c(
-      "True" = "black",
-      gp_comparison_cols
-    )
-  ) +
-  scale_fill_manual(
-    values = gp_comparison_cols
-  ) +
-  # Set line types (true values are dotted, predictions are solid)
-  scale_linetype_manual(
-    values = c(
-      "True" = "dotted",
-      "GP with features" = "solid",
-      "GP without features" = "solid"
-    )
-  ) +
-  theme_minimal(base_size = 10) +
-  theme(
-    legend.position = "bottom",
-    legend.direction = "horizontal",
-    legend.title = element_blank(),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5),
-    axis.text.y = element_text(angle = 45, hjust = 1, size = 6.5),
-    strip.text = element_text(size = 7.5),
-    strip.background = element_blank()
-  ) +
-  labs(
-    x = NULL,
-    y = "Prevalence of households with insufficient food consumption"
-  ) +
-  guides(fill = "none")
-
-gg_gp_comparison
-
-# Save the GP comparison plot
-ggsave(
-  filename = file.path("output", "figure", "TCD_GP_comparison_features_vs_no_features.png"),
-  plot = gg_gp_comparison, width = 6, height = 7, units = "in", dpi = 300, bg = "white"
 )
 
 # ============================================================================

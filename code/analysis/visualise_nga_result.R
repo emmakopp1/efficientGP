@@ -29,7 +29,7 @@ library(viridisLite)
 path_nga <- c(
   file.path(
     "output", "gaussian_process",
-    "NGA_gp_with_features_ridge_centered_20261105_222343"
+    "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_105858"
   ),
   file.path("output", "bym2", "NGA_bym2_with_features_ridge_20261106_135255"),
   file.path("output", "data", "nga_mlp"),
@@ -151,6 +151,10 @@ df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
   )
 
 # Combine true values and predictions, then set factor levels for consistent ordering
+# plotmath expressions for GP model legend labels (true exponent rendering,
+# consistent glyph weight, unlike the unicode superscript ˢᵗ)
+gp_st_cov_oc_expr <- expression(GP^{st}*" - cov - oc")
+
 df_all <- bind_rows(df_pred, df_true) |>
   mutate(
     model = factor(
@@ -164,7 +168,7 @@ df_all <- bind_rows(df_pred, df_true) |>
       ),
       labels = c(
         "True",
-        "GP with covariates",
+        "gp_st_cov_oc",
         "BYM2",
         "MLP",
         "XGBoost"
@@ -174,10 +178,18 @@ df_all <- bind_rows(df_pred, df_true) |>
 
 # Define color scheme for each model
 model_cols <- c(
-  "GP with covariates" = "#1B7837",
+  "gp_st_cov_oc" = "#1B7837",
   "BYM2" = "#D73027",
   "MLP" = "#2C7FB8",
   "XGBoost" = "#8E63CE"
+)
+
+model_legend_labels <- c(
+  "True" = "True",
+  "gp_st_cov_oc" = gp_st_cov_oc_expr,
+  "BYM2" = "BYM2",
+  "MLP" = "MLP",
+  "XGBoost" = "XGBoost"
 )
 
 gg <- ggplot(df_all, aes(
@@ -212,19 +224,22 @@ gg <- ggplot(df_all, aes(
     values = c(
       "True" = "black",
       model_cols
-    )
+    ),
+    labels = model_legend_labels
   ) +
   scale_fill_manual(
-    values = model_cols
+    values = model_cols,
+    labels = model_legend_labels
   ) +
   scale_linetype_manual(
     values = c(
       "True" = "dotted",
-      "GP with covariates" = "solid",
+      "gp_st_cov_oc" = "solid",
       "BYM2" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
-    )
+    ),
+    labels = model_legend_labels
   ) +
   theme_minimal(base_size = 10) +
   theme(
@@ -270,7 +285,7 @@ df_pred_metrics <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
       ),
       labels = c(
         "True",
-        "GP with covariates",
+        "GPˢᵗ-cov-oc",
         "BYM2",
         "MLP",
         "XGBoost"
@@ -460,10 +475,32 @@ df_gp_no_features <- map_dfr(1:5, function(i) {
     )
 })
 
-# Combine the two GP models with true values
+# Load GP predictions WITH features (standard run, no correlated error term)
+path_gp_with_features <- file.path("output", "gaussian_process", "NGA_gp_with_features_ridge_centered_20261105_222343")
+
+df_gp_with_features <- map_dfr(1:5, function(i) {
+  path_i <- file.path(path_gp_with_features, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
+
+  read_csv(path_i, show_col_types = FALSE) %>%
+    rename(
+      y_hat   = y_pred_mean,
+      ci_low  = `y_pred_ci_2.5`,
+      ci_high = `y_pred_ci_97.5`
+    ) %>%
+    select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
+    mutate(
+      cv_ind = i,
+      model  = "gp_with_features"
+    )
+})
+
+# Combine the three GP models with true values. df_gp (loaded earlier from
+# path_nga[[1]], the sensitive_analysis run) is GPˢᵗ-cov plus a
+# region-specific correlated error term (GPˢᵗ-cov-oc).
 df_gp_comparison <- bind_rows(
-  df_gp |> mutate(model = "gp_with_features"),
-  df_gp_no_features
+  df_gp_with_features,
+  df_gp_no_features,
+  df_gp |> mutate(model = "gp_correlated_error")
 ) |>
   transmute(
     Datetime,
@@ -481,15 +518,25 @@ df_gp_all <- bind_rows(df_gp_comparison, df_true) %>%
   mutate(
     model = factor(
       model,
-      levels = c("True", "gp_no_features","gp_with_features"),
-      labels = c("True", "GP without covariates", "GP with covariates")
+      levels = c("True", "gp_no_features", "gp_with_features", "gp_correlated_error"),
+      labels = c("True", "gp_st", "gp_st_cov", "gp_st_cov_oc")
     )
   )
 
 # Define colors for GP comparison
 gp_comparison_cols <- c(
-  "GP without covariates" = "#D95F02",
-  "GP with covariates" = "#1B7837"
+  "gp_st" = "#D95F02",
+  "gp_st_cov" = "#1B7837",
+  "gp_st_cov_oc" = "#7570B3"
+)
+
+# plotmath expressions for the GP model legend labels (true exponent
+# rendering, consistent glyph weight, unlike the unicode superscript ˢᵗ)
+gp_comparison_legend_labels <- c(
+  "True" = "True",
+  "gp_st" = expression(GP^{st}),
+  "gp_st_cov" = expression(GP^{st}*" - cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
 )
 
 # Create comparison plot
@@ -499,24 +546,14 @@ gg_gp_comparison <- ggplot(df_gp_all, aes(
 )) +
   # Add confidence interval ribbons for GP models only
   geom_ribbon(
-    data = df_gp_all %>% filter(model != "True") %>% 
-      mutate(model = factor(model,
-                            levels = c("GP without covariates", "GP with covariates"),
-                            labels = c("GP without covariates", "GP with covariates")
-                            )
-             ),
+    data = df_gp_all %>% filter(model != "True"),
     aes(ymin = ci_low, ymax = ci_high, fill = model),
     alpha = 0.3,
     color = NA
   ) +
   # Draw GP prediction lines
   geom_line(
-    data = df_gp_all %>% filter(model != "True") %>%
-      mutate(model = factor(model,
-                            levels = c("GP without covariates", "GP with covariates"),
-                            labels = c("GP without covariates", "GP with covariates")
-      )
-      ),
+    data = df_gp_all %>% filter(model != "True"),
     linewidth = 0.6
   ) +
   # Draw true values last so they appear on top
@@ -536,18 +573,22 @@ gg_gp_comparison <- ggplot(df_gp_all, aes(
     values = c(
       "True" = "black",
       gp_comparison_cols
-    )
+    ),
+    labels = gp_comparison_legend_labels
   ) +
   scale_fill_manual(
-    values = gp_comparison_cols
+    values = gp_comparison_cols,
+    labels = gp_comparison_legend_labels
   ) +
   # Set line types (true values are dotted, predictions are solid)
   scale_linetype_manual(
     values = c(
       "True" = "dotted",
-      "GP without covariates" = "solid",
-      "GP with covariates" = "solid"
-    )
+      "gp_st" = "solid",
+      "gp_st_cov" = "solid",
+      "gp_st_cov_oc" = "solid"
+    ),
+    labels = gp_comparison_legend_labels
   ) +
   theme_minimal(base_size = 10) +
   theme(
@@ -578,7 +619,7 @@ ggsave(
 # ============================================================================
 
 # Load GP predictions WITH features ridge centered
-path_gp_ridge <- file.path("output", "gaussian_process", "NGA_gp_with_features_ridge_centered_20261109_235403_unsurveyed")
+path_gp_ridge <- file.path("output", "gaussian_process", "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_123057_unsurveyed")
 path_i <- file.path(path_gp_ridge, "prior_posterior_diagnostics", "ppc_summary_cv1.csv")
 
 df_gp_ridge <- read_csv(path_i, show_col_types = FALSE) %>%
@@ -604,7 +645,7 @@ df_gp_ridge_plot <- df_gp_ridge %>%
     model = factor(
       model,
       levels = c("gp_ridge"),
-      labels = c("GP Ridge")
+      labels = c("GP Ridge Centered")
     )
   )
 
@@ -911,7 +952,7 @@ ggsave(
 
 ### Regression coefficients
 df_coef <- read_csv(file = file.path("output","gaussian_process",
-                                     "NGA_gp_with_features_ridge_centered_20261105_222343",
+                                     "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_105858",
                                      "prior_posterior_diagnostics",
                                      "beta_summary_cv1.csv"))
 feature_map <- c(

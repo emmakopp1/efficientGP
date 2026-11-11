@@ -23,12 +23,12 @@ library(posterior)
 # Define paths to GP model outputs
 path_nigeria <- file.path(
   "output", "gaussian_process",
-  "NGA_gp_with_features_ridge_centered_20261105_222343"
+  "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_105858"
 )
 
 path_chad <- file.path(
   "output", "gaussian_process",
-  "TCD_gp_with_features_ridge_centered_20261102_182146"
+  "TCD_gp_with_features_ridge_centered_sensitive_analysis_20261102_185709"
 )
 
 # Feature name mapping for Nigeria
@@ -40,12 +40,12 @@ feature_map_nga <- c(
 
   # economic
   log_currency_exchange                = "log (Currency exchange rate)",
-  log_food_inflation                   = "log(Food inflation rate)",
   log_food_inflation_MPI               = "log(Food inflation rate) X MPI",
   headline_inflation_cubic_intp        = "Headline inflation",
 
   # demographic / static
   MPI                                  = "MPI",
+  MPI_intensity                        = "MPI intensity",
   log_Area                             = "log (Area size)",
   Muslim                               = "Muslim population percentage",
 
@@ -75,8 +75,8 @@ desired_order_nga <- c(
   "Rainfall anomaly", "NDVI", "NDVI anomaly",
   "log (Currency exchange rate)",
   "Headline inflation",
-  "log(Food inflation rate)", "log(Food inflation rate) X MPI",
-  "MPI", "log (Area size)", "Muslim population percentage",
+  "log(Food inflation rate) X MPI",
+  "MPI", "MPI intensity", "log (Area size)", "Muslim population percentage",
   "log(Fatalities from explosion)", "log(Fatalities from battles)",
   "Number of conflicts (battle)",
   "Day index"
@@ -497,7 +497,7 @@ library(scoringRules)
 
 path_sens_nigeria <- file.path(
   "output", "gaussian_process",
-  "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261109_235422"
+  "NGA_gp_with_features_ridge_centered_sensitive_analysis_20261111_105858"
 )
 path_sens_chad <- file.path(
   "output", "gaussian_process",
@@ -515,8 +515,16 @@ crps_from_draws <- function(y_true, draws) {
 }
 
 model_cols_sens <- c(
-  "GP (reference)" = "#1B7837",
-  "GP (overlap sensitivity)" = "#D73027"
+  "gp_st_cov" = "#1B7837",
+  "gp_st_cov_oc" = "#D73027"
+)
+
+# plotmath expressions for the GP model legend labels (true exponent
+# rendering, consistent glyph weight, unlike a unicode superscript)
+model_legend_labels_sens <- c(
+  "True" = "True",
+  "gp_st_cov" = expression(GP^{st}*" - cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
 )
 
 # has_fold0: Chad has a fold 0 ("fixed") that is always in train and never a
@@ -569,7 +577,7 @@ run_sensitivity_analysis <- function(country_label, country_prefix,
       model = factor(
         model,
         levels = c("True", "Reference", "Overlap sensitivity"),
-        labels = c("True", "GP (reference)", "GP (overlap sensitivity)")
+        labels = c("True", "gp_st_cov", "gp_st_cov_oc")
       )
     )
 
@@ -624,10 +632,11 @@ run_sensitivity_analysis <- function(country_label, country_prefix,
     geom_line(data = df_all %>% filter(model == "True"), linewidth = 0.7) +
     facet_wrap(~cv_ind_adm1_name, ncol = n_panel_cols, drop = facet_drop, labeller = facet_labeller) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    scale_color_manual(values = c("True" = "black", model_cols_sens)) +
-    scale_fill_manual(values = model_cols_sens) +
+    scale_color_manual(values = c("True" = "black", model_cols_sens), labels = model_legend_labels_sens) +
+    scale_fill_manual(values = model_cols_sens, labels = model_legend_labels_sens) +
     scale_linetype_manual(
-      values = c("True" = "dotted", "GP (reference)" = "solid", "GP (overlap sensitivity)" = "solid")
+      values = c("True" = "dotted", "gp_st_cov" = "solid", "gp_st_cov_oc" = "solid"),
+      labels = model_legend_labels_sens
     ) +
     theme_minimal(base_size = 10) +
     theme(
@@ -645,47 +654,6 @@ run_sensitivity_analysis <- function(country_label, country_prefix,
   ggsave(
     filename = file.path("output", "figure", paste0(country_prefix, "_ridge_sensitive_analysis_predictions_by_adm1.png")),
     plot = gg_ts, width = 6, height = plot_height, units = "in", dpi = 300, bg = "white"
-  )
-
-  # ---- Residuals, by CV fold x region ----
-  df_resid <- df_gp %>%
-    mutate(
-      cv_ind = as.integer(cv_ind),
-      residual = y_hat - y_true,
-      cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name),
-      model = factor(
-        model,
-        levels = c("Reference", "Overlap sensitivity"),
-        labels = c("GP (reference)", "GP (overlap sensitivity)")
-      )
-    )
-
-  if (has_fold0) {
-    df_resid <- df_resid %>%
-      filter(cv_ind != 0) %>%
-      mutate(cv_ind_adm1_name = factor(cv_ind_adm1_name, levels = panel_levels_no0))
-  }
-
-  gg_resid <- ggplot(df_resid, aes(x = Datetime, y = residual, color = model)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-    geom_line(linewidth = 0.6) +
-    facet_wrap(~cv_ind_adm1_name, ncol = n_panel_cols, drop = facet_drop, labeller = facet_labeller) +
-    scale_color_manual(values = model_cols_sens) +
-    theme_minimal(base_size = 10) +
-    theme(
-      legend.position = "bottom",
-      legend.direction = "horizontal",
-      legend.title = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5),
-      axis.text.y = element_text(angle = 45, hjust = 1, size = 6.5),
-      strip.text = element_text(size = 7.5),
-      strip.background = element_blank()
-    ) +
-    labs(x = NULL, y = "Residual (predicted - true)")
-
-  ggsave(
-    filename = file.path("output", "figure", paste0(country_prefix, "_ridge_sensitive_analysis_residuals_by_adm1.png")),
-    plot = gg_resid, width = 6, height = plot_height, units = "in", dpi = 300, bg = "white"
   )
 
   # ---- Metrics comparison (fold 0 excluded: never a held-out test fold) ----
@@ -753,76 +721,167 @@ run_sensitivity_analysis <- function(country_label, country_prefix,
   metrics_comparison
 }
 
-metrics_sens_nga <- run_sensitivity_analysis(
+run_sensitivity_analysis(
   "Nigeria", "NGA", path_nigeria, path_sens_nigeria, has_fold0 = FALSE
 )
 
-metrics_sens_tcd <- run_sensitivity_analysis(
+run_sensitivity_analysis(
   "Chad", "TCD", path_chad, path_sens_chad, has_fold0 = TRUE
 )
 
 # ============================================================================
-# Overlap sensitivity analysis comparison table (tab:prediction_metrics_sens)
-# GP reference vs GP overlap sensitivity, for Nigeria and Chad
+# STEP 4: Chad - Compare GPˢᵗ vs GPˢᵗ-cov vs GPˢᵗ-cov-oc
+# (moved here from code/analysis/visualise_tcd_result.R)
 # ============================================================================
-sens_table_rows <- bind_rows(
-  metrics_sens_nga %>% mutate(Country = "Nigeria", .before = 1),
-  metrics_sens_tcd %>% mutate(Country = "Chad", .before = 1)
-) %>%
-  mutate(
-    Model = recode(Model,
-      "Reference" = "GP with covariates",
-      "GP (reference)" = "GP with covariates",
-      "GP (overlap sensitivity)" = "GP with covariates (overlap sensitivity)"
-    )
-  )
 
-fmt_row <- function(country, model, rmse, mae, coverage, mil, is_score, crps) {
-  sprintf(
-    "%s & %s & %.3f & %.3f & %s & %.3f & %.3f & %.3f \\\\",
-    country, model, rmse, mae,
-    paste0(sprintf("%.1f", coverage * 100), "\\%"),
-    mil, is_score, crps
-  )
+path_tcd_gp_no_features <- file.path("output", "gaussian_process", "TCD_gp_no_prior_20261102_192104")
+path_tcd_gp_with_features <- file.path("output", "gaussian_process", "TCD_gp_with_features_ridge_centered_20261102_182146")
+# path_sens_chad (defined above) is the correlated-error run
+
+load_tcd_gp_summary <- function(path_run, model_label) {
+  map_dfr(0:5, function(i) {
+    path_i <- file.path(path_run, "prior_posterior_diagnostics", sprintf("ppc_summary_cv%d.csv", i))
+
+    read_csv(path_i, show_col_types = FALSE) %>%
+      rename(y_hat = y_pred_mean, ci_low = `y_pred_ci_2.5`, ci_high = `y_pred_ci_97.5`) %>%
+      select(Datetime, y_hat, y_true, ci_low, ci_high, adm1_name) %>%
+      mutate(cv_ind = i, model = model_label)
+  })
 }
 
-sens_rows_tex <- sens_table_rows %>%
+df_tcd_gp_no_features <- load_tcd_gp_summary(path_tcd_gp_no_features, "gp_no_features")
+df_tcd_gp_with_features <- load_tcd_gp_summary(path_tcd_gp_with_features, "gp_with_features")
+df_tcd_gp_correlated_error <- load_tcd_gp_summary(path_sens_chad, "gp_correlated_error")
+
+df_tcd_true <- df_tcd_gp_with_features %>%
+  distinct(Datetime, adm1_name, cv_ind, y_true) %>%
   transmute(
-    row = fmt_row(
-      Country, Model, RMSE, MAE, `Coverage 95`, `Length IC 95`, `Interval Score 95`, CRPS
+    Datetime, adm1_name, cv_ind,
+    model = "True",
+    cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name),
+    poor_fcs = y_true,
+    ci_low = NA_real_,
+    ci_high = NA_real_
+  )
+
+df_tcd_gp_comparison <- bind_rows(
+  df_tcd_gp_with_features,
+  df_tcd_gp_no_features,
+  df_tcd_gp_correlated_error
+) %>%
+  transmute(
+    Datetime, adm1_name, cv_ind, model,
+    cv_ind_adm1_name = paste0("CV ", cv_ind, ": ", adm1_name),
+    poor_fcs = y_hat,
+    ci_low, ci_high
+  )
+
+df_tcd_gp_all <- bind_rows(df_tcd_gp_comparison, df_tcd_true) %>%
+  mutate(
+    cv_ind = as.integer(cv_ind),
+    model = factor(
+      model,
+      levels = c("True", "gp_no_features", "gp_with_features", "gp_correlated_error"),
+      labels = c("True", "gp_st", "gp_st_cov", "gp_st_cov_oc")
     )
+  )
+
+# Padding panels so every CV fold row keeps exactly 4 columns (Chad has fewer
+# regions per fold than Nigeria); fold 0 is never a held-out test fold and is
+# excluded from the plot (see run_sensitivity_analysis() above)
+tcd_panel_levels <- df_tcd_gp_all %>%
+  distinct(cv_ind, adm1_name, cv_ind_adm1_name) %>%
+  arrange(cv_ind, adm1_name) %>%
+  group_by(cv_ind) %>%
+  summarise(
+    lev = {
+      x <- cv_ind_adm1_name
+      k <- length(x)
+      if (k < 4) {
+        pads <- paste0("CV ", unique(cv_ind), ": __pad", seq_len(4 - k))
+        c(x, pads)
+      } else {
+        x
+      }
+    },
+    .groups = "drop"
   ) %>%
-  pull(row)
+  pull(lev) %>%
+  unlist()
 
-# Blank the Country label on the second row of each pair, as in
-# tab:prediction_metrics (Country only printed once per pair of rows)
-sens_rows_tex[c(2, 4)] <- sub("^[A-Za-z]+ & ", " & ", sens_rows_tex[c(2, 4)])
+tcd_lab_hide_pad <- function(x) ifelse(stringr::str_detect(x, "__pad"), "", x)
+tcd_panel_levels_no0 <- tcd_panel_levels[!stringr::str_detect(tcd_panel_levels, "^CV 0:")]
 
-sens_table_tex <- paste0(
-  "\\begin{table}[t!]\n",
-  "    \\centering\n",
-  "    \\caption{Overlap sensitivity analysis: metrics for the reference GP model with covariates versus the variant including a region-specific overlap error term, for Nigeria and Chad.}\n",
-  "    \\label{tab:prediction_metrics_sens}\n",
-  "    \\begin{tabular}{llcccccc}\n",
-  "    \\toprule\n",
-  "    & & & & \\multicolumn{3}{c}{95\\% \\textcolor{blue}{Predictive Interval}} & \\\\\n",
-  "    \\cmidrule(lr){5-7}\n",
-  "    Country & Model & RMSE & MAE & Coverage & MIL & Interval Score & CRPS \\\\\n",
-  "    \\midrule\n",
-  "    ", sens_rows_tex[1], "\n",
-  "    ", sens_rows_tex[2], "\n",
-  "    \\midrule\n",
-  "    ", sens_rows_tex[3], "\n",
-  "    ", sens_rows_tex[4], "\n",
-  "    \\bottomrule\n",
-  "    \\end{tabular}\n",
-  "\\end{table}\n"
+df_tcd_gp_all <- df_tcd_gp_all %>%
+  filter(cv_ind != 0) %>%
+  mutate(cv_ind_adm1_name = factor(as.character(cv_ind_adm1_name), levels = tcd_panel_levels_no0))
+
+tcd_gp_comparison_cols <- c(
+  "gp_st" = "#D95F02",
+  "gp_st_cov" = "#1B7837",
+  "gp_st_cov_oc" = "#7570B3"
 )
 
-sens_table_path <- file.path("output", "tables", "prediction_metrics_sensitivity_analysis.tex")
-writeLines(sens_table_tex, sens_table_path)
-cat("Saved", sens_table_path, "\n")
-cat(sens_table_tex)
+tcd_gp_comparison_legend_labels <- c(
+  "True" = "True",
+  "gp_st" = expression(GP^{st}),
+  "gp_st_cov" = expression(GP^{st}*" - cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
+)
+
+gg_tcd_gp_comparison <- ggplot(df_tcd_gp_all, aes(
+  x = Datetime, y = poor_fcs,
+  color = model, linetype = model
+)) +
+  geom_ribbon(
+    data = df_tcd_gp_all %>% filter(model != "True"),
+    aes(ymin = ci_low, ymax = ci_high, fill = model),
+    alpha = 0.3,
+    color = NA
+  ) +
+  geom_line(data = df_tcd_gp_all %>% filter(model != "True"), linewidth = 0.6) +
+  geom_line(data = df_tcd_gp_all %>% filter(model == "True"), linewidth = 0.7) +
+  facet_wrap(
+    ~cv_ind_adm1_name,
+    ncol = 4,
+    drop = FALSE,
+    labeller = as_labeller(tcd_lab_hide_pad)
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_manual(
+    values = c("True" = "black", tcd_gp_comparison_cols),
+    labels = tcd_gp_comparison_legend_labels
+  ) +
+  scale_fill_manual(values = tcd_gp_comparison_cols, labels = tcd_gp_comparison_legend_labels) +
+  scale_linetype_manual(
+    values = c(
+      "True" = "dotted",
+      "gp_st" = "solid",
+      "gp_st_cov" = "solid",
+      "gp_st_cov_oc" = "solid"
+    ),
+    labels = tcd_gp_comparison_legend_labels
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5),
+    axis.text.y = element_text(angle = 45, hjust = 1, size = 6.5),
+    strip.text = element_text(size = 7.5),
+    strip.background = element_blank()
+  ) +
+  labs(
+    x = NULL,
+    y = "Prevalence of households with insufficient food consumption"
+  ) +
+  guides(fill = "none")
+
+ggsave(
+  filename = file.path("output", "figure", "TCD_GP_comparison_features_vs_no_features.png"),
+  plot = gg_tcd_gp_comparison, width = 6, height = 7, units = "in", dpi = 300, bg = "white"
+)
 
 
 
