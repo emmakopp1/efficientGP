@@ -187,7 +187,7 @@ no_distribution_cols <- c("CRPS", "Interval Score 95")
 # columns re-ordered as RMSE, MAE, Coverage, MIL, Interval Score, CRPS.
 # ============================================================================
 model_label <- c(
-  "BYM2" = "Bayesian Ridge with BYM2",
+  "BYM2" = "BYM2-cov",
   "GP No Features" = "\\GPst{}",
   "GP With Features" = "\\GPcov{}",
   "GP With Features Overlap" = "\\GPcovoc{}",

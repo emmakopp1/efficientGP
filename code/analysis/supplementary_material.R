@@ -515,16 +515,16 @@ crps_from_draws <- function(y_true, draws) {
 }
 
 model_cols_sens <- c(
-  "gp_st_cov" = "#1B7837",
-  "gp_st_cov_oc" = "#D73027"
+  "gp_st_cov" = "#E69F00",
+  "gp_st_cov_oc" = "#0072B2"
 )
 
 # plotmath expressions for the GP model legend labels (true exponent
 # rendering, consistent glyph weight, unlike a unicode superscript)
 model_legend_labels_sens <- c(
   "True" = "True",
-  "gp_st_cov" = expression(GP^{st}*" - cov"),
-  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
+  "gp_st_cov" = expression(GP^{st}*" -cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" -cov -oc")
 )
 
 # has_fold0: Chad has a fold 0 ("fixed") that is always in train and never a
@@ -781,8 +781,8 @@ df_tcd_gp_all <- bind_rows(df_tcd_gp_comparison, df_tcd_true) %>%
     cv_ind = as.integer(cv_ind),
     model = factor(
       model,
-      levels = c("True", "gp_no_features", "gp_with_features", "gp_correlated_error"),
-      labels = c("True", "gp_st", "gp_st_cov", "gp_st_cov_oc")
+      levels = c("True", "gp_correlated_error", "gp_with_features", "gp_no_features"),
+      labels = c("True", "gp_st_cov_oc", "gp_st_cov", "gp_st")
     )
   )
 
@@ -817,16 +817,16 @@ df_tcd_gp_all <- df_tcd_gp_all %>%
   mutate(cv_ind_adm1_name = factor(as.character(cv_ind_adm1_name), levels = tcd_panel_levels_no0))
 
 tcd_gp_comparison_cols <- c(
-  "gp_st" = "#D95F02",
-  "gp_st_cov" = "#1B7837",
-  "gp_st_cov_oc" = "#7570B3"
+  "gp_st" = "#D4B896",
+  "gp_st_cov" = "#E69F00",
+  "gp_st_cov_oc" = "#0072B2"
 )
 
 tcd_gp_comparison_legend_labels <- c(
   "True" = "True",
   "gp_st" = expression(GP^{st}),
-  "gp_st_cov" = expression(GP^{st}*" - cov"),
-  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
+  "gp_st_cov" = expression(GP^{st}*" -cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" -cov -oc")
 )
 
 gg_tcd_gp_comparison <- ggplot(df_tcd_gp_all, aes(

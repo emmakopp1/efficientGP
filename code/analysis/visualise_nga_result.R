@@ -153,7 +153,7 @@ df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
 # Combine true values and predictions, then set factor levels for consistent ordering
 # plotmath expressions for GP model legend labels (true exponent rendering,
 # consistent glyph weight, unlike the unicode superscript ˢᵗ)
-gp_st_cov_oc_expr <- expression(GP^{st}*" - cov - oc")
+gp_st_cov_oc_expr <- expression(GP^{st}*" -cov -oc")
 
 df_all <- bind_rows(df_pred, df_true) |>
   mutate(
@@ -169,25 +169,25 @@ df_all <- bind_rows(df_pred, df_true) |>
       labels = c(
         "True",
         "gp_st_cov_oc",
-        "BYM2",
+        "BYM2-cov",
         "MLP",
         "XGBoost"
       )
     )
   )
 
-# Define color scheme for each model
+# Define color scheme for each model (consistent across all figures)
 model_cols <- c(
-  "gp_st_cov_oc" = "#1B7837",
-  "BYM2" = "#D73027",
-  "MLP" = "#2C7FB8",
+  "gp_st_cov_oc" = "#0072B2",
+  "BYM2-cov" = "#D73027",
+  "MLP" = "#009E73",
   "XGBoost" = "#8E63CE"
 )
 
 model_legend_labels <- c(
   "True" = "True",
   "gp_st_cov_oc" = gp_st_cov_oc_expr,
-  "BYM2" = "BYM2",
+  "BYM2-cov" = "BYM2-cov",
   "MLP" = "MLP",
   "XGBoost" = "XGBoost"
 )
@@ -235,7 +235,7 @@ gg <- ggplot(df_all, aes(
     values = c(
       "True" = "dotted",
       "gp_st_cov_oc" = "solid",
-      "BYM2" = "solid",
+      "BYM2-cov" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
     ),
@@ -286,7 +286,7 @@ df_pred_metrics <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
       labels = c(
         "True",
         "GPˢᵗ-cov-oc",
-        "BYM2",
+        "BYM2-cov",
         "MLP",
         "XGBoost"
       )
@@ -518,16 +518,16 @@ df_gp_all <- bind_rows(df_gp_comparison, df_true) %>%
   mutate(
     model = factor(
       model,
-      levels = c("True", "gp_no_features", "gp_with_features", "gp_correlated_error"),
-      labels = c("True", "gp_st", "gp_st_cov", "gp_st_cov_oc")
+      levels = c("True", "gp_correlated_error", "gp_with_features", "gp_no_features"),
+      labels = c("True", "gp_st_cov_oc", "gp_st_cov", "gp_st")
     )
   )
 
-# Define colors for GP comparison
+# Define colors for GP comparison (consistent across all figures)
 gp_comparison_cols <- c(
-  "gp_st" = "#D95F02",
-  "gp_st_cov" = "#1B7837",
-  "gp_st_cov_oc" = "#7570B3"
+  "gp_st" = "#D4B896",
+  "gp_st_cov" = "#E69F00",
+  "gp_st_cov_oc" = "#0072B2"
 )
 
 # plotmath expressions for the GP model legend labels (true exponent
@@ -535,8 +535,8 @@ gp_comparison_cols <- c(
 gp_comparison_legend_labels <- c(
   "True" = "True",
   "gp_st" = expression(GP^{st}),
-  "gp_st_cov" = expression(GP^{st}*" - cov"),
-  "gp_st_cov_oc" = expression(GP^{st}*" - cov - oc")
+  "gp_st_cov" = expression(GP^{st}*" -cov"),
+  "gp_st_cov_oc" = expression(GP^{st}*" -cov -oc")
 )
 
 # Create comparison plot
@@ -649,8 +649,8 @@ df_gp_ridge_plot <- df_gp_ridge %>%
     )
   )
 
-# Define color for GP ridge centered model
-gp_ridge_color <- "#1B7837"
+# Define color for GP ridge centered model (gp_st_cov_oc, consistent across all figures)
+gp_ridge_color <- "#0072B2"
 # Create plot by region (predictions only)
 gg_gp_ridge <- ggplot(df_gp_ridge_plot, aes(
   x = Datetime, y = poor_fcs)
@@ -1014,19 +1014,23 @@ p <- df_coef |>
   ) %>%
   ggplot(aes(x = feature_clean, y = posterior_mean, fill = includes_zero)) +
   geom_col() +
-  geom_errorbar(aes(ymin = ci_2.5, ymax = ci_97.5), 
+  geom_errorbar(aes(ymin = ci_2.5, ymax = ci_97.5),
                 width = 0.2,alpha=0.5) +
-  
+
   geom_text(
     aes(y = right_limit, label = label_ci),
     hjust = 1,
     size = 3.5
   )+
-  
+
   geom_hline(yintercept = 0, linetype = "dashed") +
   coord_flip() +
   scale_y_continuous(limits = c(min(df_coef$ci_2.5), right_limit),
                      breaks = c(-0.5, 0.0, 0.5, 1.0)) +
+  scale_fill_manual(
+    values = c("TRUE" = "#2C7FB8", "FALSE" = "#D73027"),
+    guide = "none"
+  ) +
   labs(x = NULL, y = "Posterior mean (95% CI)") +
   theme_minimal() +
   theme(

@@ -147,7 +147,7 @@ df_pred <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
 # Combine true values and predictions, then set factor levels for consistent ordering
 # plotmath expression for the GP model legend label (true exponent rendering,
 # consistent glyph weight, unlike the unicode superscript ˢᵗ)
-gp_st_cov_oc_expr <- expression(GP^{st}*" - cov - oc")
+gp_st_cov_oc_expr <- expression(GP^{st}*" -cov -oc")
 
 df_all <- bind_rows(df_pred, df_true) |>
   mutate(
@@ -163,7 +163,7 @@ df_all <- bind_rows(df_pred, df_true) |>
       labels = c(
         "True",
         "gp_st_cov_oc",
-        "BYM2",
+        "BYM2-cov",
         "MLP",
         "XGBoost"
       )
@@ -219,16 +219,16 @@ panel_levels_no0 <- panel_levels[!str_detect(panel_levels, "^CV 0:")]
 
 
 model_cols <- c(
-  "gp_st_cov_oc" = "#1B7837",
-  "BYM2" = "#D73027",
-  "MLP" = "#2C7FB8",
+  "gp_st_cov_oc" = "#0072B2",
+  "BYM2-cov" = "#D73027",
+  "MLP" = "#009E73",
   "XGBoost" = "#8E63CE"
 )
 
 model_legend_labels <- c(
   "True" = "True",
   "gp_st_cov_oc" = gp_st_cov_oc_expr,
-  "BYM2" = "BYM2",
+  "BYM2-cov" = "BYM2-cov",
   "MLP" = "MLP",
   "XGBoost" = "XGBoost"
 )
@@ -269,7 +269,7 @@ gg <- ggplot(df_all_plot, aes(x = Datetime, y = poor_fcs, color = model, linetyp
     values = c(
       "True" = "dotted",
       "gp_st_cov_oc" = "solid",
-      "BYM2" = "solid",
+      "BYM2-cov" = "solid",
       "MLP" = "solid",
       "XGBoost" = "solid"
     ),
@@ -320,7 +320,7 @@ df_pred_metrics <- bind_rows(df_gp, df_bym2, df_mlp, df_xg_boost) |>
       labels = c(
         "True",
         "GP",
-        "BYM2",
+        "BYM2-cov",
         "MLP",
         "XGBoost"
       )
