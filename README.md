@@ -4,7 +4,7 @@ This repository contains the code and data accompanying the paper:
 
 > **Filling survey gaps in food security monitoring with spatio-temporal additive Gaussian process models**
 
-by E. Kopp, S. Ishida, R. Leygonie, F. Panero (2026). We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against a Bayesian Ridge with BYM2 spatial effect (BYM2), a Multi-Layer Perceptron (MLP), and XGBoost. The paper's main GP model ($GP^{st}\text{-cov-oc}$) adds a region-specific correlated error term to account for dependence induced by overlapping 90-day rolling survey windows.
+by E. Kopp, S. Ishida, R. Leygonie, F. Panero (2026). We provide a Bayesian spatio-temporal Gaussian Process (GP) model for forecasting food insecurity at the sub-national level, benchmarked against a Bayesian Ridge with BYM2 spatial effect (BYM2-cov), a Multi-Layer Perceptron (MLP), and XGBoost. The paper's main GP model (GP^st-cov-oc) adds a region-specific correlated error term to account for dependence induced by overlapping 90-day rolling survey windows.
 
 ---
 
@@ -31,12 +31,12 @@ efficientGP/
 │   │   │   ├── NGA_gp_rho1_cross_validation.R                   # Nigeria: spatial range rho1 cross-validation
 │   │   │   ├── NGA_gp_no_features_rho1fixed.R                   # Nigeria: GP without covariates
 │   │   │   ├── NGA_gp_with_feature_rho1fixed_ridge_prior.R      # Nigeria: GP with covariates, ridge prior
-│   │   │   ├── NGA_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R # Nigeria: GP with covariates and a region-specific correlated error term (paper's main model, $GP^{st}\text{-cov-oc}$)
+│   │   │   ├── NGA_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R # Nigeria: GP with covariates and a region-specific correlated error term (paper's main model, GP^st-cov-oc)
 │   │   │   ├── NGA_gp_with_feature_ridge_prior_prediction_correlated_error.R # Nigeria: real-world prediction for states not covered by the survey, with the correlated-error term
 │   │   │   ├── TCD_gp_rho1_cross_validation.R                   # Chad: spatial range rho1 cross-validation
 │   │   │   ├── TCD_gp_no_features_rho1fixed.R                   # Chad: GP without covariates
 │   │   │   ├── TCD_gp_with_features_rho1fixed_ridge_prior.R     # Chad: GP with covariates, ridge prior
-│   │   │   └── TCD_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R # Chad: GP with covariates and a region-specific correlated error term (paper's main model, $GP^{st}\text{-cov-oc}$)
+│   │   │   └── TCD_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R # Chad: GP with covariates and a region-specific correlated error term (paper's main model, GP^st-cov-oc)
 │   │   ├── bym/
 │   │   │   ├── bym_runner_lib.R           # Core BYM2 framework: data loading, CV, MCMC, diagnostics
 │   │   │   ├── build_adjacency.py         # Builds the admin1 adjacency graphs (ICAR structure) for Nigeria and Chad
@@ -85,68 +85,46 @@ efficientGP/
 
 ### Spatio-temporal Gaussian Process
 
-The GP prior is defined over regions $s$ and weeks $t$. The spatio-temporal function is decomposed as an additive GP:
+The GP prior is defined over regions and weeks, and is decomposed as an additive GP combining a spatial kernel, a temporal kernel, their interaction, and a per-region random effect:
 
-$$f(s, t) = f_{\text{space}}(s, s') + f_{\text{time}}(t, t') + f_{\text{space}}(s, s')f_{\text{time}}(t, t')+ \sigma_r^2 \cdot \delta_{s=s'}$$
-
-- **Spatial kernel** $f_{\text{space}}$: Ornstein–Uhlenbeck (exponential) with range $\rho_1$, fixed by cross-validation.
-- **Temporal kernel** $f_{\text{time}}$: sum of an exponential and a squared Brownian Motion (fBM) with range $\rho_2$ and Hurst exponent $H$.
-- **Region random effect** $\sigma_r^2$: white noise term per region.
+- **Spatial kernel**: Ornstein-Uhlenbeck (exponential), with its range fixed by cross-validation.
+- **Temporal kernel**: sum of an exponential and a squared Brownian Motion (fBM).
+- **Region random effect**: white noise term per region.
 
 Covariates enter through a linear term. Several model variants are provided:
 
 | Model | Stan model | Description |
 |---|---|---|
-| $GP^{st}$ | `GPst_rho1fixed.stan` | Intercept-only spatio-temporal GP, no covariates |
-| $GP^{st}\text{-cov}$ | `GPstCOV_rho1fixed_ridge_centered_prior.stan` | GP with covariates, ridge-centered prior |
-| $GP^{st}\text{-cov-oc}$ | `NGA_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` / `TCD_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` | $GP^{st}\text{-cov}$ plus a region-specific correlated error term accounting for dependence induced by overlapping 90-day rolling survey windows (**paper's main model**) |
+| GP^st | `GPst_rho1fixed.stan` | Intercept-only spatio-temporal GP, no covariates |
+| GP^st-cov | `GPstCOV_rho1fixed_ridge_centered_prior.stan` | GP with covariates, ridge-centered prior |
+| GP^st-cov-oc | `NGA_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` / `TCD_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` | GP^st-cov plus a region-specific correlated error term accounting for dependence induced by overlapping 90-day rolling survey windows (**paper's main model**) |
 | Normal prior | `GPstCOV_rho1fixed_normal_prior.stan` | Standard shrinkage towards zero (kept as a historical comparison) |
 
-MCMC estimation is performed via [CmdStanR](https://mc-stan.org/cmdstanr/) (4 chains, 500 warmup + 1000 sampling iterations). An adaptive loop automatically doubles the budget if convergence criteria ($\hat{R} < 1.05$, ESS $> 400$) are not met.
+MCMC estimation is performed via [CmdStanR](https://mc-stan.org/cmdstanr/) (4 chains, 500 warmup + 1000 sampling iterations). An adaptive loop automatically doubles the budget if convergence criteria are not met.
 
 ### Benchmark models
 
 | Model | Implementation | Uncertainty estimation |
 |---|---|---|
-| Bayesian Ridge with BYM2 | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, ridge prior on covariates | Posterior predictive distribution |
+| BYM2-cov | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, ridge prior on covariates | Posterior predictive distribution |
 | MLP | PyTorch — 3 hidden layers, MC Dropout | Monte Carlo Dropout samples |
 | XGBoost | xgboost + scikit-learn `GridSearchCV` | Bootstrap confidence intervals |
 
-All benchmarks share the same leave-one-region-out CV folds. BYM2 reuses the same engineered covariates and train-set standardisation as the GP; MLP and XGBoost consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline and apply their own scaling.
+All benchmarks share the same leave-one-region-out CV folds. BYM2-cov reuses the same engineered covariates and train-set standardisation as the GP; MLP and XGBoost consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline and apply their own scaling.
 
 ---
 
 ## Requirements
 
-### R
-
-- R ≥ 4.4.1
-- `cmdstanr` ≥ 0.9.0 (with a working CmdStan installation)
-- `tidyverse` ≥ 2.0.0
-- `posterior` ≥ 1.6.1
-- `bayesplot` ≥ 1.14.0
-
-Install CmdStan via:
-```r
-cmdstanr::install_cmdstan()
-```
-
-### Python
-
-- Python ≥ 3.9
-- `torch`, `xgboost`, `scikit-learn`, `pandas`, `numpy`, `shap`
-
-```bash
-pip install torch xgboost scikit-learn pandas numpy shap
-```
+See [REQUIREMENTS.md](REQUIREMENTS.md) and install the listed R and Python dependencies before running the pipeline.
 
 ---
 
 ## Reproducing the results
 
-The pipeline runs in six sequential steps.
+The pipeline runs in five sequential steps.
 
-### Step 1 — Cross-validate the spatial range $\rho_1$
+### Step 1 — Cross-validate the spatial range rho1
 
 Before fitting the full GP, cross-validate the spatial range parameter for each country:
 
@@ -158,59 +136,35 @@ nohup Rscript code/models/gaussian_process/TCD_gp_rho1_cross_validation.R \
   > output/logs/tcd_rho1_cv.log 2>&1 &
 ```
 
-The optimal $\rho_1$ is printed to the log and must be set manually in the corresponding model script before Step 2.
+The optimal rho1 is printed to the log and must be set manually in the corresponding model script before Step 2.
 
-### Step 2 — Fit the GP models
+### Step 2 — Fit the main GP model (GP^st-cov-oc)
 
-Each script encodes a specific country × prior combination. Results are saved to a timestamped directory under `output/gaussian_process/`.
+Results are saved to a timestamped directory under `output/gaussian_process/`.
 
 ```bash
 # Nigeria
-nohup Rscript code/models/gaussian_process/NGA_gp_with_feature_rho1fixed_ridge_prior.R \
-  > output/logs/nga_gp_ridge.log 2>&1 &
-
-nohup Rscript code/models/gaussian_process/NGA_gp_no_features_rho1fixed.R \
-  > output/logs/nga_gp_no_features.log 2>&1 &
-
-# Nigeria, paper's main model: GP with covariates and a region-specific
-# correlated error term ($GP^{st}\text{-cov-oc}$)
 nohup Rscript code/models/gaussian_process/NGA_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R \
   > output/logs/nga_gp_correlated_error.log 2>&1 &
 
 # Chad
-nohup Rscript code/models/gaussian_process/TCD_gp_with_features_rho1fixed_ridge_prior.R \
-  > output/logs/tcd_gp_ridge.log 2>&1 &
-
-nohup Rscript code/models/gaussian_process/TCD_gp_no_features_rho1fixed.R \
-  > output/logs/tcd_gp_no_features.log 2>&1 &
-
-# Chad, paper's main model: GP with covariates and a region-specific
-# correlated error term ($GP^{st}\text{-cov-oc}$)
 nohup Rscript code/models/gaussian_process/TCD_gp_with_feature_rho1fixed_ridge_prior_sensititvity_analysis.R \
   > output/logs/tcd_gp_correlated_error.log 2>&1 &
-```
-
-Each run produces a timestamped output directory (the correlated-error model appends `_sensitive_analysis`, e.g. `NGA_gp_with_features_ridge_centered_sensitive_analysis_YYYYMMDD_HHMMSS`):
-
-```
-output/gaussian_process/NGA_gp_with_features_ridge_centered_YYYYMMDD_HHMMSS/
-├── convergence_diagnostics/            # Rhat, ESS, trace plots
-├── prior_posterior_diagnostics/
-│   ├── ppc_summary_all_folds.csv       # Predictions + quantiles for all test observations
-│   └── ppc_statistics_by_fold.csv      # Coverage, RMSE, MAE per fold
-├── fit_cv{0..5}.rds                    # Stan MCMC draws (one per CV fold)
-├── data_train_cv{0..5}.csv            # Training sets (used by benchmark models)
-├── data_test_cv{0..5}.csv             # Test sets
-└── final_cv_summary.csv               # Aggregate rMSE, MAE, coverage
 ```
 
 > **Note:** The output directories referenced in `code/analysis/compute_prediction_metrics.R`, `visualise_*_result.R`, and `supplementary_material.R` correspond to specific runs used for the paper. Update these paths if you re-run the models.
 
 ### Step 3 — Fit the benchmark models
 
-The Python benchmarks consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline. Pass the GP output directory via `--project-path` (relative to the project root).
+BYM2-cov, MLP and XGBoost are benchmarked against the GP. The Python benchmarks consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline; pass the GP output directory via `--project-path` (relative to the project root). BYM2-cov is fit directly in R and requires the admin1 adjacency graphs to be built once beforehand (needs `geopandas` and `libpysal`).
 
 ```bash
+# BYM2-cov
+python code/models/bym/build_adjacency.py
+
+nohup Rscript code/models/bym/NGA_basic_bym.R > output/logs/nga_bym2.log 2>&1 &
+nohup Rscript code/models/bym/TCD_basic_bym.R > output/logs/tcd_bym2.log 2>&1 &
+
 # MLP
 python code/models/mlp.py \
     --country nigeria \
@@ -234,18 +188,7 @@ python code/models/xg-boost.py \
     --output-data output/data/tcd_xg_boost
 ```
 
-### Step 4 — Fit the BYM2 benchmark
-
-Build the admin1 adjacency graphs once (requires `geopandas` and `libpysal`), then fit the model with the same folds, covariates and standardisation as the GP. Outputs are written to `output/bym2/` with the same structure as the GP outputs.
-
-```bash
-python code/models/bym/build_adjacency.py
-
-nohup Rscript code/models/bym/NGA_basic_bym.R > output/logs/nga_bym2.log 2>&1 &
-nohup Rscript code/models/bym/TCD_basic_bym.R > output/logs/tcd_bym2.log 2>&1 &
-```
-
-### Step 5 — Predict unsurveyed regions (Nigeria)
+### Step 4 — Predict unsurveyed regions (Nigeria)
 
 Train on all surveyed regions and predict food insecurity for Nigerian states not covered by the survey, using the paper's main model (GP with covariates and the correlated error term):
 
@@ -256,7 +199,7 @@ nohup Rscript code/models/gaussian_process/NGA_gp_with_feature_ridge_prior_predi
 
 Results are saved to `output/gaussian_process/NGA_gp_with_features_ridge_centered_sensitive_analysis_YYYYMMDD_HHMMSS_unsurveyed/`, consumed by `visualise_nga_result.R` for the real-world prediction map.
 
-### Step 6 — Analysis and figures
+### Step 5 — Analysis and figures
 
 ```bash
 # Metrics tables (RMSE, MAE, Coverage 95%, MIL, Interval Score, CRPS)
