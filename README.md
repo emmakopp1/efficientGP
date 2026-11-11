@@ -81,31 +81,6 @@ efficientGP/
 
 ---
 
-## Model description
-
-Several GP model variants are provided:
-
-| Model | Stan model | Description |
-|---|---|---|
-| GP^st | `GPst_rho1fixed.stan` | Intercept-only spatio-temporal GP, no covariates |
-| GP^st-cov | `GPstCOV_rho1fixed_ridge_centered_prior.stan` | GP with covariates, ridge-centered prior |
-| GP^st-cov-oc | `NGA_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` / `TCD_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan` | GP^st-cov plus a region-specific correlated error term accounting for dependence induced by overlapping 90-day rolling survey windows (**paper's main model**) |
-| Normal prior | `GPstCOV_rho1fixed_normal_prior.stan` | Standard shrinkage towards zero (kept as a historical comparison) |
-
-MCMC estimation is performed via [CmdStanR](https://mc-stan.org/cmdstanr/) (4 chains, 500 warmup + 1000 sampling iterations). An adaptive loop automatically doubles the budget if convergence criteria are not met.
-
-### Benchmark models
-
-| Model | Implementation | Uncertainty estimation |
-|---|---|---|
-| BYM2-cov | Stan (`code/models/bym/`): BYM2 spatial effect on the admin1 adjacency graph, ridge prior on covariates | Posterior predictive distribution |
-| MLP | PyTorch — 3 hidden layers, MC Dropout | Monte Carlo Dropout samples |
-| XGBoost | xgboost + scikit-learn `GridSearchCV` | Bootstrap confidence intervals |
-
-All benchmarks share the same leave-one-region-out CV folds. BYM2-cov reuses the same engineered covariates and train-set standardisation as the GP; MLP and XGBoost consume the `data_train_cv*.csv` / `data_test_cv*.csv` files written by the GP pipeline and apply their own scaling.
-
----
-
 ## Requirements
 
 See [REQUIREMENTS.md](REQUIREMENTS.md) and install the listed R and Python dependencies before running the pipeline.
