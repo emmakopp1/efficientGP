@@ -83,15 +83,7 @@ efficientGP/
 
 ## Model description
 
-### Spatio-temporal Gaussian Process
-
-The GP prior is defined over regions and weeks, and is decomposed as an additive GP combining a spatial kernel, a temporal kernel, their interaction, and a per-region random effect:
-
-- **Spatial kernel**: Ornstein-Uhlenbeck (exponential), with its range fixed by cross-validation.
-- **Temporal kernel**: sum of an exponential and a squared Brownian Motion (fBM).
-- **Region random effect**: white noise term per region.
-
-Covariates enter through a linear term. Several model variants are provided:
+Several GP model variants are provided:
 
 | Model | Stan model | Description |
 |---|---|---|
