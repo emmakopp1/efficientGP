@@ -42,16 +42,14 @@ model_config <- list(
 stan_file_name <- "NGA_GPstCOV_rho1fixed_ridge_prior_sensitive_analysis.stan"
 
 # Selected features (by SHAP)
-# Note: includes log_food_inflation instead of MPI_intensity, unlike
-# NGA_gp_with_feature_rho1fixed_ridge_prior.R; kept as is pending review.
 selected_features <- c(
   "rainfall_3_months_anomaly_cubic_intp",
   "ndvi_value_cubic_intp",
   "ndvi_anomaly_cubic_intp",
   "log_currency_exchange",
   "log_Area",
+  "MPI_intensity",
   "Muslim",
-  "log_food_inflation",
   "log_food_inflation_MPI",
   "log_fatalities_explosions",
   "MPI",
